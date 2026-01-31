@@ -1,0 +1,38 @@
+[
+  {
+    "id": "crayon-seamless-doodle-v2",
+    "name": "Crayon Doodle Seamless",
+    "description": "Patron seamless doodle con textura de crayola",
+    "paramsSchema": {
+      "themeKey": { "type": "string", "enum": ["birthday", "baptism", "baby", "school", "forest", "space"] },
+      "backgroundColor": { "type": "string", "regex": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$" },
+      "crayonColors": {
+        "type": "array",
+        "minItems": 1,
+        "maxItems": 5,
+        "items": { "type": "string", "regex": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$" }
+      }
+    },
+    "themeOptions": {
+      "birthday": "birthday party doodles",
+      "baptism": "baptism celebration symbols",
+      "baby": "baby shower icons",
+      "school": "school supplies and playful learning icons",
+      "forest": "forest animals and leaves",
+      "space": "planets, stars, rockets"
+    },
+    "promptTemplate": "Use the INPUT_JSON values only. Create a seamless, tileable illustration pattern designed to repeat infinitely without visible seams on all edges (left, right, top, bottom). Follow the style and technique: Hand-drawn, childlike doodle style; Crayon / wax pastel texture, clearly visible grain and uneven strokes; Slightly imperfect lines, organic, playful, and warm; Flat 2D illustration, no realism, no gradients, no shadows, no depth; Consistent stroke thickness across all elements. Color rules: Background color must match INPUT_JSON.backgroundColor. Drawing colors must be ONLY INPUT_JSON.crayonColors. No additional colors, no black, no white unless explicitly included. Illustration content must match INPUT_JSON.themeDescription. Fill the canvas with many small, evenly distributed doodles. Avoid large focal elements; all drawings should be small and repetitive. Balance density evenly across the entire canvas. Seamless tiling requirements (CRITICAL): All elements near the edges must continue logically on the opposite edges; No element may be cut in a way that creates visible borders; The pattern must align perfectly when repeated horizontally and vertically; The design must be a true seamless tile suitable for CSS backgrounds and large repeating surfaces. Composition constraints: Square format (1:1 aspect ratio); No text unless explicitly required by INPUT_JSON.themeDescription; No logos, no watermarks, no signatures; No perspective, no lighting effects. Output intent: High-resolution seamless pattern; Designed specifically for web backgrounds, wallpapers, and UI surfaces.",
+    "titleTemplate": "Crayon Doodle — {{themeKey}}",
+    "descriptionTemplate": "Doodles con textura de crayola para {{themeKey}} en un tile seamless.",
+    "tags": ["crayon", "doodle", "seamless", "{{themeKey}}"],
+    "defaults": {
+      "themeKey": "birthday",
+      "backgroundColor": "#FFF7E6",
+      "crayonColors": ["#FF6B6B", "#FFD93D", "#6BCB77"]
+    },
+    "model": "gpt-image-1",
+    "size": "1024x1024",
+    "output_format": "webp",
+    "background": "opaque"
+  }
+]

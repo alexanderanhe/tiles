@@ -1,3 +1,37 @@
-import { type RouteConfig, index } from "@react-router/dev/routes";
+import { type RouteConfig, index, route } from "@react-router/dev/routes";
 
-export default [index("routes/home.tsx")] satisfies RouteConfig;
+export default [
+  index("routes/home.tsx"),
+  route("tiles/:idSlug", "routes/tiles.$id.tsx", { id: "routes/tiles.$id" }),
+  route("u/:username/:idSlug", "routes/u.$username.$idSlug.tsx"),
+  route("login", "routes/login.tsx"),
+  route("register", "routes/register.tsx"),
+  route("verify", "routes/verify.tsx"),
+  route("upload", "routes/upload.tsx"),
+  route("my-tiles", "routes/my-tiles.tsx"),
+  route("admin", "routes/admin.tsx"),
+  route("u/:username", "routes/u.$username.tsx"),
+  route("creator/:id", "routes/creator.$id.tsx"),
+  route("generator", "routes/generator.tsx"),
+
+  route("api/auth/register", "routes/api/auth.register.ts"),
+  route("api/auth/send-code", "routes/api/auth.send-code.ts"),
+  route("api/auth/verify", "routes/api/auth.verify.ts"),
+  route("api/auth/login", "routes/api/auth.login.ts"),
+  route("api/auth/logout", "routes/api/auth.logout.ts"),
+  route("api/me", "routes/api/me.ts"),
+  route("api/admin/users/:id", "routes/api/admin.users.$id.ts"),
+
+  route("api/tiles", "routes/api/tiles.index.ts"),
+  route("api/tiles/mine", "routes/api/tiles.mine.ts"),
+  route("api/tiles/:id", "routes/api/tiles.$id.ts"),
+  route("api/tiles/:id/preview", "routes/api/tiles.$id.preview.ts"),
+  route("api/tiles/:id/download", "routes/api/tiles.$id.download.ts"),
+  route("api/tiles/:id/finalize", "routes/api/tiles.$id.finalize.ts"),
+  route("api/r2/sign-upload", "routes/api/r2.sign-upload.ts"),
+
+  route("api/events/view", "routes/api/events.view.ts"),
+  route("api/events/search", "routes/api/events.search.ts"),
+  route("api/templates", "routes/api/templates.ts"),
+  route("api/ai/generate", "routes/api/ai.generate.ts"),
+] satisfies RouteConfig;

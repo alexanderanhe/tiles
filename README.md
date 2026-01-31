@@ -1,87 +1,131 @@
-# Welcome to React Router!
+# Seamless Tiles
 
-A modern, production-ready template for building full-stack React applications using React Router.
+App tipo Unsplash para patrones seamless (React Router v7 monolito). Incluye auth por email con código de 6 dígitos, roles, upload a Cloudflare R2, previews con watermark, descargas protegidas, y tracking básico.
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/remix-run/react-router-templates/tree/main/default)
+## Requisitos
 
-## Features
+- Node 20+
+- MongoDB
+- Cloudflare R2 (S3 compatible)
+- Resend
+- (Opcional) Redis
 
-- 🚀 Server-side rendering
-- ⚡️ Hot Module Replacement (HMR)
-- 📦 Asset bundling and optimization
-- 🔄 Data loading and mutations
-- 🔒 TypeScript by default
-- 🎉 TailwindCSS for styling
-- 📖 [React Router docs](https://reactrouter.com/)
-
-## Getting Started
-
-### Installation
-
-Install the dependencies:
+## Setup
 
 ```bash
-npm install
+pnpm install
+pnpm dev
 ```
 
-### Development
+La app valida las variables de entorno al arrancar. Si falta alguna, fallará con un error claro.
 
-Start the development server with HMR:
+## Variables de entorno (con ejemplos)
 
 ```bash
-npm run dev
+# MongoDB
+MONGODB_URI=mongodb://127.0.0.1:27017
+MONGODB_DB=seamless_tiles
+
+# Cloudflare R2 (S3 compatible)
+R2_ACCOUNT_ID=your-account-id
+R2_ACCESS_KEY_ID=your-access-key-id
+R2_SECRET_ACCESS_KEY=your-secret-access-key
+R2_BUCKET=seamless-tiles
+R2_PUBLIC_BASE_URL=https://pub-xxxx.r2.dev
+
+# Resend
+RESEND_API_KEY=re_1234567890abcdef
+RESEND_FROM_EMAIL="Seamless Tiles <hello@yourdomain.com>"
+
+# App
+APP_BASE_URL=http://localhost:5173
+JWT_SECRET=change_this_to_a_32_char_minimum_secret
+
+# Redis (optional)
+REDIS_URL=redis://localhost:6379
+
+# Watermark
+WATERMARK_TEXT="TileVault • Login to download"
+WATERMARK_OPACITY=0.18
+WATERMARK_SCALE=0.08
+
+# Download policy: user | creator | admin | any_authenticated
+DOWNLOAD_REQUIRE_ROLE=any_authenticated
+
+# OpenAI Image Generation
+OPENAI_API_KEY=
+OPENAI_IMAGE_MODEL=gpt-image-1
+OPENAI_IMAGE_SIZE=1024x1024
+OPENAI_IMAGE_OUTPUT_FORMAT=webp
+OPENAI_IMAGE_BACKGROUND=opaque
+OPENAI_MAX_IMAGES_PER_REQUEST=1
 ```
 
-Your application will be available at `http://localhost:5173`.
+Notas:
+- `R2_PUBLIC_BASE_URL` es opcional. Si está vacío, se usan URLs firmadas.
+- `REDIS_URL` es opcional. Si falta, el rate limit usa memoria.
+- `JWT_SECRET` debe tener mínimo 32 caracteres.
 
-## Building for Production
+## Modelos (MongoDB)
 
-Create a production build:
+- `users`: email, name, role, status, timestamps.
+- `email_verifications`: email, codeHash (salt:hash), expiresAt TTL, attempts.
+- `tiles`: metadata + r2 keys + stats.
+- `events`: tracking con índices por tile/user/type.
 
-```bash
-npm run build
-```
+## Endpoints
 
-## Deployment
+Auth:
+- `POST /api/auth/register` `{ email, name }`
+- `POST /api/auth/send-code` `{ email }`
+- `POST /api/auth/verify` `{ email, code }`
+- `POST /api/auth/login` `{ email }`
+- `POST /api/auth/logout`
 
-### Docker Deployment
+Users/Roles:
+- `GET /api/me`
+- `PATCH /api/admin/users/:id`
 
-To build and run using Docker:
+Tiles:
+- `GET /api/tiles` `?q=&tags=&sort=&page=&limit=`
+- `POST /api/tiles`
+- `POST /api/r2/sign-upload`
+- `POST /api/tiles/:id/finalize`
+- `GET /api/tiles/:id`
+- `GET /api/tiles/:id/preview`
+- `GET /api/tiles/:id/download`
 
-```bash
-docker build -t my-app .
+Tracking:
+- `POST /api/events/view`
+- `POST /api/events/search`
 
-# Run the container
-docker run -p 3000:3000 my-app
-```
+## Flujo de upload
 
-The containerized application can be deployed to any platform that supports Docker, including:
+1) `POST /api/tiles` crea el documento base.
+2) `POST /api/r2/sign-upload` obtiene URL firmada de subida.
+3) Cliente sube el archivo con `PUT` a R2.
+4) `POST /api/tiles/:id/finalize` genera preview + thumb con watermark y actualiza metadatos.
 
-- AWS ECS
-- Google Cloud Run
-- Azure Container Apps
-- Digital Ocean App Platform
-- Fly.io
-- Railway
+## UI
 
-### DIY Deployment
+- `/` Home con masonry y búsqueda.
+- `/tiles/:id` Detalle con preview y acciones.
+- `/login`, `/register`, `/verify` Auth.
+- `/upload` (creator/admin).
+- `/admin` (admin).
+- `/creator/:id` y `/u/:username` perfiles.
+- `/generator` (auth) para generar tiles con OpenAI.
 
-If you're familiar with deploying Node applications, the built-in app server is production-ready.
+## AI Generator
 
-Make sure to deploy the output of `npm run build`
+El generador usa templates parametrizados definidos en `app/data/prompt-templates.json`.
 
-```
-├── package.json
-├── package-lock.json (or pnpm-lock.yaml, or bun.lockb)
-├── build/
-│   ├── client/    # Static assets
-│   └── server/    # Server-side code
-```
+Endpoints:
+- `GET /api/templates` devuelve templates disponibles.
+- `POST /api/ai/generate` genera una imagen con OpenAI, sube a R2 y crea el tile.
 
-## Styling
+El resultado se guarda como tile normal y aparece en la galería.
 
-This template comes with [Tailwind CSS](https://tailwindcss.com/) already configured for a simple default starting experience. You can use whatever CSS framework you prefer.
+## Testing
 
----
-
-Built with ❤️ using React Router.
+No se incluyen tests automáticos por defecto. Se recomienda mockear servicios externos (Resend, R2, Redis) en unit tests.

@@ -5,10 +5,16 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useLocation,
 } from "react-router";
+import type { Location } from "react-router";
 
 import type { Route } from "./+types/root";
 import "./app.css";
+import { getUserFromRequest } from "./lib/auth.server";
+import { TopNav } from "./components/TopNav";
+import { SideNav } from "./components/SideNav";
+import { MobileNav } from "./components/MobileNav";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -19,7 +25,7 @@ export const links: Route.LinksFunction = () => [
   },
   {
     rel: "stylesheet",
-    href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
+    href: "https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap",
   },
 ];
 
@@ -32,7 +38,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Meta />
         <Links />
       </head>
-      <body>
+      <body className="min-h-screen">
         {children}
         <ScrollRestoration />
         <Scripts />
@@ -41,8 +47,40 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
+export async function loader({ request }: Route.LoaderArgs) {
+  const user = await getUserFromRequest(request);
+  return { user };
+}
+
 export default function App() {
-  return <Outlet />;
+  const location = useLocation();
+  const state = location.state as { backgroundLocation?: Location } | null;
+  const backgroundLocation = state?.backgroundLocation;
+  const path = location.pathname;
+  const isAuthRoute =
+    path.startsWith("/login") ||
+    path.startsWith("/register") ||
+    path.startsWith("/verify");
+
+  if (isAuthRoute) {
+    return <Outlet />;
+  }
+
+  return (
+    <div className="app-shell">
+      <TopNav showTabs={path === "/"} />
+      <SideNav />
+      <main className="app-main">
+        <Outlet location={backgroundLocation ?? location} />
+      </main>
+      <MobileNav />
+      {backgroundLocation ? (
+        <div className="modal-overlay">
+          <Outlet />
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
