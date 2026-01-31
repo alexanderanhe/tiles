@@ -65,6 +65,20 @@ export async function findUserByHandle(handle: string) {
   return isUuid ? null : findUserById(handle);
 }
 
+export async function generateUniqueUsername(base: string) {
+  const baseSlug = base
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)+/g, "")
+    .slice(0, 20);
+  const fallback = baseSlug || "user";
+  const existing = await findUserByUsername(fallback);
+  if (!existing) return fallback;
+  const suffix = Math.floor(1000 + Math.random() * 9000);
+  return `${fallback}-${suffix}`;
+}
+
 export async function activateUser(email: string) {
   const { users } = await getCollections();
   const now = new Date();
@@ -87,10 +101,15 @@ export async function activateUserById(id: string) {
   return unwrapResult(result);
 }
 
-export async function upsertActiveUser(email: string, name?: string) {
+export async function upsertActiveUser(email: string, name?: string, username?: string) {
   const { users } = await getCollections();
   const now = new Date();
   const normalizedEmail = email.toLowerCase();
+  const derivedUsername =
+    username ??
+    (name
+      ? await generateUniqueUsername(name)
+      : await generateUniqueUsername(normalizedEmail.split("@")[0]));
   const result = await users.findOneAndUpdate(
     { email: normalizedEmail },
     {
@@ -98,6 +117,7 @@ export async function upsertActiveUser(email: string, name?: string) {
         _id: crypto.randomUUID(),
         email: normalizedEmail,
         name: name?.trim(),
+        username: derivedUsername,
         role: "creator",
         createdAt: now,
       },

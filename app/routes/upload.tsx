@@ -113,7 +113,7 @@ export default function Upload() {
                   method: "POST",
                   headers: { "content-type": "application/json" },
                   body: JSON.stringify({
-                    title: file.name,
+                    title: prettyTitleFromFilename(file.name),
                     description: "",
                     tags: [],
                     visibility: "private",
@@ -268,3 +268,10 @@ export default function Upload() {
     </main>
   );
 }
+  function prettyTitleFromFilename(filename: string) {
+    return filename
+      .replace(/\.[^/.]+$/, "")
+      .replace(/[-_]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }

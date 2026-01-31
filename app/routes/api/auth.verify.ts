@@ -42,7 +42,11 @@ export async function action({ request }: Route.ActionArgs) {
   }
 
   const fallbackName = email.split("@")[0];
-  const activeUser = await upsertActiveUser(email, user?.name ?? fallbackName);
+  const activeUser = await upsertActiveUser(
+    email,
+    user?.name ?? fallbackName,
+    user?.username
+  );
   console.log("Active user:", activeUser);
   if (!activeUser) return jsonError("User not found", 404);
 

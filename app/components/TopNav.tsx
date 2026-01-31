@@ -1,4 +1,5 @@
 import { Form, Link, useNavigate, useRouteLoaderData } from "react-router";
+import { HiMagnifyingGlass } from "react-icons/hi2";
 import type { SessionUser } from "../lib/types";
 
 export function TopNav({ showTabs }: { showTabs?: boolean }) {
@@ -14,7 +15,7 @@ export function TopNav({ showTabs }: { showTabs?: boolean }) {
         </Link>
 
         <Form method="get" action="/" className="top-nav__search">
-          <span className="top-nav__search-icon">⌕</span>
+          <HiMagnifyingGlass className="top-nav__search-icon" />
           <input
             name="q"
             placeholder="Buscar texturas, colores, conceptos"

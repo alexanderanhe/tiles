@@ -72,7 +72,12 @@ export default function CreatorProfile() {
                   body: JSON.stringify({ username }),
                 });
                 if (!res.ok) {
-                  setStatus("No se pudo guardar.");
+                  const data = await res.json().catch(() => null);
+                  if (res.status === 409) {
+                    setStatus("Username ya existe.");
+                    return;
+                  }
+                  setStatus(data?.error ?? "No se pudo guardar.");
                   return;
                 }
                 setStatus("Guardado.");

@@ -1,13 +1,21 @@
 import { Link, useRouteLoaderData } from "react-router";
+import {
+  HiHome,
+  HiFire,
+  HiSparkles,
+  HiArrowUpTray,
+  HiSquares2X2,
+  HiShieldCheck,
+} from "react-icons/hi2";
 import type { SessionUser } from "../lib/types";
 
 const navItems = [
-  { to: "/", label: "Home", icon: "M3 3h8v8H3z" },
-  { to: "/?tags=Trending", label: "Trending", icon: "M3 3h8v2H3z" },
-  { to: "/generator", label: "Generator", icon: "M2 2h10v10H2z" },
-  { to: "/upload", label: "Upload", icon: "M2 9h10v2H2z" },
-  { to: "/my-tiles", label: "Mis tiles", icon: "M2 3h10v8H2z" },
-  { to: "/admin", label: "Admin", icon: "M6 2l4 4-4 4-4-4z" },
+  { to: "/", label: "Home", icon: HiHome },
+  { to: "/?tags=Trending", label: "Trending", icon: HiFire },
+  { to: "/generator", label: "Generator", icon: HiSparkles },
+  { to: "/upload", label: "Upload", icon: HiArrowUpTray },
+  { to: "/my-tiles", label: "Mis tiles", icon: HiSquares2X2 },
+  { to: "/admin", label: "Admin", icon: HiShieldCheck },
 ];
 
 export function SideNav() {
@@ -34,11 +42,10 @@ export function SideNav() {
           if (item.to === "/my-tiles" && !user) {
             return null;
           }
+          const Icon = item.icon;
           return (
             <Link key={item.to} to={item.to} className="side-nav__item">
-              <svg viewBox="0 0 14 14" aria-hidden>
-                <path d={item.icon} />
-              </svg>
+              <Icon aria-hidden />
               <span>{item.label}</span>
             </Link>
           );

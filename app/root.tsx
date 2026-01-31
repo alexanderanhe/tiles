@@ -56,6 +56,7 @@ export default function App() {
   const location = useLocation();
   const state = location.state as { backgroundLocation?: Location } | null;
   const backgroundLocation = state?.backgroundLocation;
+  const isModalSource = backgroundLocation?.pathname === "/";
   const path = location.pathname;
   const isAuthRoute =
     path.startsWith("/login") ||
@@ -71,10 +72,10 @@ export default function App() {
       <TopNav showTabs={path === "/"} />
       <SideNav />
       <main className="app-main">
-        <Outlet location={backgroundLocation ?? location} />
+        <Outlet location={isModalSource ? backgroundLocation : location} />
       </main>
       <MobileNav />
-      {backgroundLocation ? (
+      {isModalSource ? (
         <div className="modal-overlay">
           <Outlet />
         </div>

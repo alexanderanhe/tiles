@@ -2,8 +2,8 @@ import sharp from "sharp";
 import { env } from "./env.server";
 
 function buildWatermarkSvg(width: number, height: number) {
-  const text = env.WATERMARK_TEXT;
-  const opacity = env.WATERMARK_OPACITY;
+  const text = env.WATERMARK_TEXT?.trim() || "Login to download";
+  const opacity = Math.min(0.6, Math.max(0.08, env.WATERMARK_OPACITY));
   const scale = env.WATERMARK_SCALE;
   const baseFontSize = Math.max(14, Math.floor(width * scale));
   const patternSize = Math.max(180, Math.floor(baseFontSize * 6));
@@ -22,13 +22,14 @@ function buildWatermarkSvg(width: number, height: number) {
 }
 
 export async function applyWatermark(input: Buffer, targetWidth: number) {
-  const base = sharp(input).resize({ width: targetWidth, withoutEnlargement: true });
-  const metadata = await base.metadata();
-  const width = metadata.width ?? targetWidth;
-  const height = metadata.height ?? Math.floor(targetWidth * 0.75);
+  const resized = await sharp(input)
+    .resize({ width: targetWidth, withoutEnlargement: true })
+    .toBuffer({ resolveWithObject: true });
+  const width = resized.info.width ?? targetWidth;
+  const height = resized.info.height ?? Math.floor(targetWidth * 0.75);
   const svg = Buffer.from(buildWatermarkSvg(width, height));
 
-  return base
+  return sharp(resized.data)
     .composite([{ input: svg, blend: "over" }])
     .webp({ quality: 86 })
     .toBuffer({ resolveWithObject: true });

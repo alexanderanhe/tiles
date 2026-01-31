@@ -120,3 +120,8 @@ export async function updateTileMeta(id: string, data: Partial<Tile>) {
     { $set: { ...data, updatedAt: new Date() } }
   );
 }
+
+export async function deleteTileById(id: string) {
+  const { tiles } = await getCollections();
+  return tiles.deleteOne({ _id: id });
+}

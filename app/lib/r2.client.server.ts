@@ -1,4 +1,5 @@
 import {
+  DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
   PutObjectCommand,
@@ -61,6 +62,15 @@ export async function putObject(key: string, body: Buffer, contentType: string) 
 export async function getObject(key: string) {
   return r2.send(
     new GetObjectCommand({
+      Bucket: env.R2_BUCKET,
+      Key: key,
+    })
+  );
+}
+
+export async function deleteObject(key: string) {
+  return r2.send(
+    new DeleteObjectCommand({
       Bucket: env.R2_BUCKET,
       Key: key,
     })

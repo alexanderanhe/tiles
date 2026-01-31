@@ -1,6 +1,15 @@
 import type { Route } from "./+types/u.$username.$idSlug";
 import { useLoaderData, useLocation, useNavigate } from "react-router";
 import type { Location } from "react-router";
+import { useState } from "react";
+import {
+  HiArrowDownTray,
+  HiPencilSquare,
+  HiLink,
+  HiEllipsisVertical,
+  HiArrowPath,
+  HiTrash,
+} from "react-icons/hi2";
 import { initServer } from "../lib/init.server";
 import { findUserByHandle } from "../lib/users.server";
 import { findTileById, incrementTileStats, listTiles } from "../lib/tiles.server";
@@ -111,6 +120,13 @@ export default function UserTileDetail() {
     useLoaderData<typeof loader>();
   const navigate = useNavigate();
   const location = useLocation();
+  const [finalizeStatus, setFinalizeStatus] = useState("");
+  const initials = (user.name ?? user.email ?? "")
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
   const hasBackground = Boolean(
     (location.state as { backgroundLocation?: Location })?.backgroundLocation
   );
@@ -120,7 +136,7 @@ export default function UserTileDetail() {
       <div className="tile-page__header">
         <div className="tile-page__author">
           <div className="tile-page__avatar">
-            {(user.username ?? user.name ?? user.email).slice(0, 2).toUpperCase()}
+            {initials || "U"}
           </div>
           <div>
             <p className="tile-page__name">{user.name ?? user.username ?? user.email}</p>
@@ -142,29 +158,76 @@ export default function UserTileDetail() {
                 const data = await response.json();
                 if (data?.url) window.location.href = data.url;
               }}
+              aria-label="Descargar original"
+              title="Descargar original"
             >
-              Descargar
+              <HiArrowDownTray aria-hidden />
             </button>
           ) : (
-            <button className="btn-pill primary" onClick={() => navigate("/login")}>
-              Iniciar sesión
+            <button
+              className="btn-pill primary"
+              onClick={() => navigate("/login")}
+              aria-label="Iniciar sesión"
+              title="Iniciar sesión"
+            >
+              <HiArrowDownTray aria-hidden />
             </button>
           )}
-          <button
-            className="btn-pill ghost"
-            onClick={() => navigator.clipboard.writeText(window.location.href)}
-          >
-            Copiar enlace
-          </button>
-          {isOwner ? (
-            <button
-              className="btn-pill ghost"
-              onClick={() => navigate(`/tiles/${tile._id}`)}
-            >
-              Editar
-            </button>
-          ) : null}
+          <details className="tile-actions-menu">
+            <summary className="btn-pill ghost" aria-label="Mas acciones" title="Mas acciones">
+              <HiEllipsisVertical aria-hidden />
+            </summary>
+            <div className="tile-actions-menu__panel">
+              <button
+                onClick={() => navigator.clipboard.writeText(window.location.href)}
+              >
+                <HiLink aria-hidden />
+                Copiar enlace
+              </button>
+              {isOwner ? (
+                <>
+                  <button onClick={() => navigate(`/tiles/${tile._id}`)}>
+                    <HiPencilSquare aria-hidden />
+                    Editar
+                  </button>
+                  <button
+                    onClick={async () => {
+                      setFinalizeStatus("Reintentando preview...");
+                      const res = await fetch(`/api/tiles/${tile._id}/finalize`, {
+                        method: "POST",
+                      });
+                      if (!res.ok) {
+                        setFinalizeStatus("No se pudo generar el preview.");
+                        return;
+                      }
+                      setFinalizeStatus("Preview actualizado.");
+                      navigate(0);
+                    }}
+                  >
+                    <HiArrowPath aria-hidden />
+                    Reintentar preview
+                  </button>
+                  <button
+                    className="danger"
+                    onClick={async () => {
+                      const confirmed = window.confirm("Eliminar este tile?");
+                      if (!confirmed) return;
+                      const res = await fetch(`/api/tiles/${tile._id}`, {
+                        method: "DELETE",
+                      });
+                      if (!res.ok) return;
+                      navigate("/my-tiles");
+                    }}
+                  >
+                    <HiTrash aria-hidden />
+                    Eliminar
+                  </button>
+                </>
+              ) : null}
+            </div>
+          </details>
         </div>
+        {finalizeStatus ? <p className="tile-detail__status">{finalizeStatus}</p> : null}
       </div>
 
       <div className="tile-page__content">

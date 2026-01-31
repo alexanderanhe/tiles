@@ -3,7 +3,8 @@ import type { Route } from "./+types/tiles.$id";
 import { initServer } from "../../lib/init.server";
 import { json, jsonError, jsonOk, parseJson } from "../../lib/api.server";
 import { getUserFromRequest } from "../../lib/auth.server";
-import { findTileById, updateTileMeta } from "../../lib/tiles.server";
+import { deleteObject } from "../../lib/r2.client.server";
+import { deleteTileById, findTileById, updateTileMeta } from "../../lib/tiles.server";
 import { tileUpdateSchema } from "../../lib/validation.server";
 
 export async function loader({ request, params }: Route.LoaderArgs) {
@@ -33,6 +34,14 @@ export async function action({ request, params }: Route.ActionArgs) {
   if (!isOwner) return jsonError("Forbidden", 403);
 
   if (request.method !== "PATCH") {
+    if (request.method === "DELETE") {
+      const keys = [tile.r2.masterKey, tile.r2.previewKey, tile.r2.thumbKey].filter(
+        Boolean
+      ) as string[];
+      await Promise.all(keys.map((key) => deleteObject(key).catch(() => null)));
+      await deleteTileById(tile._id);
+      return jsonOk({ ok: true });
+    }
     return jsonError("Method not allowed", 405);
   }
 
