@@ -1,7 +1,7 @@
 import type { Route } from "./+types/me";
 
 import { commitUserSession, getUserFromRequest, requireUser } from "../../lib/auth.server";
-import { json, jsonError, jsonOk, parseJson } from "../../lib/api.server";
+import { json, jsonError, jsonOk, parseJson } from "../../lib/api";
 import { meUpdateSchema } from "../../lib/validation.server";
 import { findUserByUsername, updateUserProfile } from "../../lib/users.server";
 

@@ -49,6 +49,11 @@ export async function findTileByContentHashGlobal(contentHash: string) {
   return tiles.findOne({ contentHash });
 }
 
+export async function findTileByCacheKey(cacheKey: string) {
+  const { tiles } = await getCollections();
+  return tiles.findOne({ "meta.cacheKey": cacheKey });
+}
+
 export async function updateTileR2(id: string, r2: Tile["r2"], meta: Partial<Tile>) {
   const { tiles } = await getCollections();
   await tiles.updateOne(

@@ -1,7 +1,7 @@
 import type { Route } from "./+types/auth.logout";
 
 import { destroyUserSession } from "../../lib/auth.server";
-import { json } from "../../lib/api.server";
+import { json } from "../../lib/api";
 
 export async function action({ request }: Route.ActionArgs) {
   const cookie = await destroyUserSession(request);

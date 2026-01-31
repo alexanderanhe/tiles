@@ -1,7 +1,7 @@
 import type { Route } from "./+types/tiles.$id.finalize";
 
 import { initServer } from "../../lib/init.server";
-import { json, jsonError, jsonOk } from "../../lib/api.server";
+import { json, jsonError, jsonOk } from "../../lib/api";
 import { requireUser } from "../../lib/auth.server";
 import { findTileById, updateTileR2 } from "../../lib/tiles.server";
 import { getObject, headObject, putObject } from "../../lib/r2.client.server";

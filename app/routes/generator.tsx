@@ -152,6 +152,7 @@ export default function Generator() {
                         <span>{key}</span>
                         <input
                           type={isHexColor(schema) ? "color" : "text"}
+                          maxLength={schema.max}
                           value={(params[key] as string) ?? ""}
                           onChange={(event) => updateParam(key, event.target.value)}
                         />

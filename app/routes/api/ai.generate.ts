@@ -1,7 +1,7 @@
 import type { Route } from "./+types/ai.generate";
 import crypto from "node:crypto";
 
-import { json, parseJson, jsonError, jsonOk } from "../../lib/api.server";
+import { json, parseJson, jsonError, jsonOk } from "../../lib/api";
 import { requireUser } from "../../lib/auth.server";
 import { checkRateLimit } from "../../lib/rateLimit.server";
 import { env } from "../../lib/env.server";
@@ -16,13 +16,45 @@ import {
 } from "../../lib/templates.server";
 import { getR2PublicUrl, putObject, signDownloadUrl } from "../../lib/r2.client.server";
 import { applyWatermark, getImageMetadata } from "../../lib/watermark.server";
-import { createTile, updateTileR2 } from "../../lib/tiles.server";
+import { createTile, findTileByCacheKey, updateTileR2 } from "../../lib/tiles.server";
 import { trackEvent } from "../../lib/events.server";
 import { getClientIp, getUserAgent } from "../../lib/request.server";
+import { slugify } from "../../lib/slug";
 
 interface GenerateBody {
   templateId: string;
   params?: Record<string, unknown>;
+}
+
+function normalizeText(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeHex(color: string) {
+  const hex = color.toLowerCase();
+  if (hex.length === 4) {
+    return (
+      "#" +
+      hex[1] +
+      hex[1] +
+      hex[2] +
+      hex[2] +
+      hex[3] +
+      hex[3]
+    );
+  }
+  return hex;
+}
+
+function buildCacheKey(input: Record<string, unknown>) {
+  const serialized = JSON.stringify(input);
+  return crypto.createHash("sha256").update(serialized).digest("hex");
 }
 
 export async function action({ request }: Route.ActionArgs) {
@@ -49,7 +81,10 @@ export async function action({ request }: Route.ActionArgs) {
   if (!parsed.success) return jsonError("Invalid params", 400);
 
   const themeKey = (parsed.data as Record<string, string>).themeKey;
-  const themeText = template.themeOptions?.[themeKey];
+  const themeTextInput = String(
+    (parsed.data as Record<string, string>).themeText ?? ""
+  ).trim();
+  const themeText = themeTextInput || template.themeOptions?.[themeKey];
   if (!themeText) return jsonError("Invalid theme", 400);
 
   for (const value of Object.values(parsed.data)) {
@@ -59,6 +94,7 @@ export async function action({ request }: Route.ActionArgs) {
   }
 
   const derived = deriveParams(parsed.data);
+  const themeLabel = themeTextInput || themeKey;
   const baseInstructions =
     "You must generate a true seamless tile. Edges must match perfectly on all sides. " +
     "No borders, no seams, repeatable pattern. Square format. Flat 2D illustration. " +
@@ -68,9 +104,46 @@ export async function action({ request }: Route.ActionArgs) {
   const safeInput = {
     themeKey,
     themeDescription: themeText,
+    themeText: themeTextInput,
     backgroundColor: (parsed.data as Record<string, string>).backgroundColor,
     crayonColors: (parsed.data as Record<string, string[]>).crayonColors,
   };
+
+  const normalizedColors = (
+    (parsed.data as Record<string, string[]>).crayonColors ?? []
+  )
+    .map(normalizeHex)
+    .sort();
+  const cacheKey = buildCacheKey({
+    templateId: template.id,
+    model: template.model ?? env.OPENAI_IMAGE_MODEL,
+    size: template.size ?? env.OPENAI_IMAGE_SIZE,
+    output_format: template.output_format ?? env.OPENAI_IMAGE_OUTPUT_FORMAT,
+    background: template.background ?? env.OPENAI_IMAGE_BACKGROUND,
+    themeKey,
+    themeText: normalizeText(themeText),
+    backgroundColor: normalizeHex(
+      (parsed.data as Record<string, string>).backgroundColor
+    ),
+    crayonColors: normalizedColors,
+  });
+
+  const existing = await findTileByCacheKey(cacheKey);
+  if (existing) {
+    if (existing.ownerId === user.id) {
+      const slug = slugify(existing.title ?? "");
+      const detailUrl = `/u/${user.username ?? user.id}/${existing._id}${
+        slug ? `-${slug}` : ""
+      }`;
+      const previewUrl = existing.r2.previewKey
+        ? getR2PublicUrl(existing.r2.previewKey) ||
+          (await signDownloadUrl(existing.r2.previewKey))
+        : existing.r2.masterKey
+          ? await signDownloadUrl(existing.r2.masterKey)
+          : "";
+      return jsonOk({ tileId: existing._id, detailUrl, previewUrl, cached: true });
+    }
+  }
 
   const prompt =
     baseInstructions +
@@ -131,16 +204,67 @@ export async function action({ request }: Route.ActionArgs) {
   await putObject(thumbKey, thumb.data, "image/webp");
 
   const title = template.titleTemplate
-    ? renderPrompt(template.titleTemplate, { ...parsed.data, ...derived })
+    ? renderPrompt(template.titleTemplate, {
+        ...parsed.data,
+        ...derived,
+        themeLabel,
+      })
     : `${template.name} — ${String(parsed.data?.theme ?? "AI")}`;
   const description = template.descriptionTemplate
-    ? renderPrompt(template.descriptionTemplate, { ...parsed.data, ...derived })
+    ? renderPrompt(template.descriptionTemplate, {
+        ...parsed.data,
+        ...derived,
+        themeLabel,
+      })
     : template.description ?? "AI generated seamless tile";
   const tagList = template.tags?.length
     ? template.tags.map((tag) =>
-        renderPrompt(tag, { ...parsed.data, ...derived })
+        renderPrompt(tag, { ...parsed.data, ...derived, themeLabel })
       )
     : [String(parsed.data?.theme ?? "ai")];
+  if (existing && existing.ownerId !== user.id) {
+    const cloneId = crypto.randomUUID();
+    const clone = await createTile({
+      id: cloneId,
+      ownerId: user.id,
+      title,
+      description,
+      tags: tagList,
+      seamless: true,
+      visibility: "private",
+      format: existing.format,
+      masterKey: existing.r2.masterKey,
+      meta: {
+        generatedBy: "openai",
+        templateId: template.id,
+        params: parsed.data,
+        cacheKey,
+        sourceTileId: existing._id,
+      },
+    });
+    await updateTileR2(
+      cloneId,
+      { ...existing.r2 },
+      {
+        width: existing.width,
+        height: existing.height,
+        format: existing.format,
+      }
+    );
+
+    const slug = slugify(clone.title ?? "");
+    const detailUrl = `/u/${user.username ?? user.id}/${clone._id}${
+      slug ? `-${slug}` : ""
+    }`;
+    const previewUrl = existing.r2.previewKey
+      ? getR2PublicUrl(existing.r2.previewKey) ||
+        (await signDownloadUrl(existing.r2.previewKey))
+      : existing.r2.masterKey
+        ? await signDownloadUrl(existing.r2.masterKey)
+        : "";
+    return jsonOk({ tileId: clone._id, detailUrl, previewUrl, cached: true });
+  }
+
   const tile = await createTile({
     id: tileId,
     ownerId: user.id,
@@ -148,10 +272,15 @@ export async function action({ request }: Route.ActionArgs) {
     description,
     tags: tagList,
     seamless: true,
-    visibility: "public",
+    visibility: "private",
     format: ext,
     masterKey,
-    meta: { generatedBy: "openai", templateId: template.id, params: parsed.data },
+    meta: {
+      generatedBy: "openai",
+      templateId: template.id,
+      params: parsed.data,
+      cacheKey,
+    },
   });
 
   await updateTileR2(
@@ -191,9 +320,10 @@ export async function action({ request }: Route.ActionArgs) {
   const publicPreview = getR2PublicUrl(previewKey);
   const previewUrl = publicPreview || (await signDownloadUrl(previewKey));
 
+  const slug = slugify(title);
   return jsonOk({
     tileId,
-    detailUrl: `/tiles/${tileId}`,
+    detailUrl: `/u/${user.username ?? user.id}/${tileId}${slug ? `-${slug}` : ""}`,
     previewUrl,
   });
 }

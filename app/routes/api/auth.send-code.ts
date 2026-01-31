@@ -1,7 +1,7 @@
 import type { Route } from "./+types/auth.send-code";
 
 import { initServer } from "../../lib/init.server";
-import { json, parseJson, jsonError, jsonOk } from "../../lib/api.server";
+import { json, parseJson, jsonError, jsonOk } from "../../lib/api";
 import { sendCodeSchema } from "../../lib/validation.server";
 import { checkRateLimit } from "../../lib/rateLimit.server";
 import { createEmailVerification } from "../../lib/verification.server";

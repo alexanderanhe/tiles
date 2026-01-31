@@ -1,7 +1,7 @@
 import type { Route } from "./+types/tiles.$id.preview";
 
 import { initServer } from "../../lib/init.server";
-import { json, jsonError, jsonOk } from "../../lib/api.server";
+import { json, jsonError, jsonOk } from "../../lib/api";
 import { getUserFromRequest } from "../../lib/auth.server";
 import { findTileById } from "../../lib/tiles.server";
 import { getR2PublicUrl, signDownloadUrl } from "../../lib/r2.client.server";

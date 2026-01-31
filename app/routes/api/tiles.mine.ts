@@ -1,7 +1,7 @@
 import type { Route } from "./+types/tiles.mine";
 
 import { initServer } from "../../lib/init.server";
-import { jsonError, jsonOk } from "../../lib/api.server";
+import { jsonError, jsonOk } from "../../lib/api";
 import { requireUser } from "../../lib/auth.server";
 import { tileListSchema } from "../../lib/validation.server";
 import { listTiles } from "../../lib/tiles.server";

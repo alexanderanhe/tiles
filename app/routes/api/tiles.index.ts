@@ -1,6 +1,6 @@
 import type { Route } from "./+types/tiles.index";
 import { initServer } from "../../lib/init.server";
-import { json, parseJson, jsonError, jsonOk } from "../../lib/api.server";
+import { json, parseJson, jsonError, jsonOk } from "../../lib/api";
 import { requireUser } from "../../lib/auth.server";
 import { tileCreateSchema, tileListSchema } from "../../lib/validation.server";
 import crypto from "node:crypto";

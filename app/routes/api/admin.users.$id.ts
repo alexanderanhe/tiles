@@ -1,7 +1,7 @@
 import type { Route } from "./+types/admin.users.$id";
 
 import { initServer } from "../../lib/init.server";
-import { json, parseJson, jsonError, jsonOk } from "../../lib/api.server";
+import { json, parseJson, jsonError, jsonOk } from "../../lib/api";
 import { requireUser } from "../../lib/auth.server";
 import { adminUpdateUserSchema } from "../../lib/validation.server";
 import { updateUserRoleStatus } from "../../lib/users.server";

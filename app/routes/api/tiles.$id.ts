@@ -1,7 +1,7 @@
 import type { Route } from "./+types/tiles.$id";
 
 import { initServer } from "../../lib/init.server";
-import { json, jsonError, jsonOk, parseJson } from "../../lib/api.server";
+import { json, jsonError, jsonOk, parseJson } from "../../lib/api";
 import { getUserFromRequest } from "../../lib/auth.server";
 import { deleteObject } from "../../lib/r2.client.server";
 import { deleteTileById, findTileById, updateTileMeta } from "../../lib/tiles.server";

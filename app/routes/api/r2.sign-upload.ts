@@ -1,7 +1,7 @@
 import type { Route } from "./+types/r2.sign-upload";
 
 import { initServer } from "../../lib/init.server";
-import { json, parseJson, jsonError, jsonOk } from "../../lib/api.server";
+import { json, parseJson, jsonError, jsonOk } from "../../lib/api";
 import { requireUser } from "../../lib/auth.server";
 import { signUploadSchema } from "../../lib/validation.server";
 import { checkRateLimit } from "../../lib/rateLimit.server";

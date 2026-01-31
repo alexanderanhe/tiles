@@ -1,6 +1,6 @@
 import type { Route } from "./+types/templates";
 
-import { json, jsonError } from "../../lib/api.server";
+import { json, jsonError } from "../../lib/api";
 import { JsonTemplateStore } from "../../lib/templates.server";
 
 export async function loader() {

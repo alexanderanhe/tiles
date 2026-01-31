@@ -1,7 +1,7 @@
 import type { Route } from "./+types/events.search";
 
 import { initServer } from "../../lib/init.server";
-import { json, parseJson, jsonError, jsonOk } from "../../lib/api.server";
+import { json, parseJson, jsonError, jsonOk } from "../../lib/api";
 import { trackSearchSchema } from "../../lib/validation.server";
 import { trackEvent } from "../../lib/events.server";
 import { getClientIp, getUserAgent } from "../../lib/request.server";
