@@ -8,6 +8,7 @@ import {
   useLocation,
 } from "react-router";
 import type { Location } from "react-router";
+import { useEffect } from "react";
 
 import type { Route } from "./+types/root";
 import "./app.css";
@@ -27,6 +28,16 @@ export const links: Route.LinksFunction = () => [
     rel: "stylesheet",
     href: "https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap",
   },
+  { rel: "manifest", href: "/manifest.webmanifest" },
+  { rel: "icon", href: "/icon-192.svg", type: "image/svg+xml" },
+  { rel: "apple-touch-icon", href: "/icon-192.svg" },
+];
+
+export const meta: Route.MetaFunction = () => [
+  { name: "theme-color", content: "#ffffff" },
+  { property: "og:site_name", content: "Seamless Tiles" },
+  { property: "og:type", content: "website" },
+  { name: "twitter:card", content: "summary_large_image" },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -62,6 +73,12 @@ export default function App() {
     path.startsWith("/login") ||
     path.startsWith("/register") ||
     path.startsWith("/verify");
+
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    }
+  }, []);
 
   if (isAuthRoute) {
     return <Outlet />;

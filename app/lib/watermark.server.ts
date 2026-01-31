@@ -7,12 +7,16 @@ function buildWatermarkSvg(width: number, height: number) {
   const scale = env.WATERMARK_SCALE;
   const baseFontSize = Math.max(14, Math.floor(width * scale));
   const patternSize = Math.max(180, Math.floor(baseFontSize * 6));
+  const lineHeight = Math.max(28, Math.floor(baseFontSize * 2.2));
 
   return `
     <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <pattern id="tile" patternUnits="userSpaceOnUse" width="${patternSize}" height="${patternSize}" patternTransform="rotate(-30)">
           <text x="0" y="${baseFontSize}" font-family="'Helvetica Neue', Arial, sans-serif" font-size="${baseFontSize}" fill="white" fill-opacity="${opacity * 0.25}">${text}</text>
+          <text x="${Math.floor(patternSize / 2)}" y="${baseFontSize}" font-family="'Helvetica Neue', Arial, sans-serif" font-size="${baseFontSize}" fill="white" fill-opacity="${opacity * 0.25}">${text}</text>
+          <text x="0" y="${baseFontSize + lineHeight}" font-family="'Helvetica Neue', Arial, sans-serif" font-size="${baseFontSize}" fill="white" fill-opacity="${opacity * 0.25}">${text}</text>
+          <text x="${Math.floor(patternSize / 2)}" y="${baseFontSize + lineHeight}" font-family="'Helvetica Neue', Arial, sans-serif" font-size="${baseFontSize}" fill="white" fill-opacity="${opacity * 0.25}">${text}</text>
         </pattern>
       </defs>
       <rect width="100%" height="100%" fill="url(#tile)" />

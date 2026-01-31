@@ -6,10 +6,12 @@ export function TileCard({
   tile,
   previewUrl,
   ownerHandle,
+  authorName,
 }: {
   tile: Tile;
   previewUrl?: string;
   ownerHandle?: string;
+  authorName?: string;
 }) {
   const previewSrc = previewUrl ?? "";
   const location = useLocation();
@@ -32,12 +34,12 @@ export function TileCard({
         )}
         <div className="tile-card__overlay">
           <h3>{tile.title}</h3>
-          <p>{tile.tags.slice(0, 3).join(" · ")}</p>
+          {authorName ? <p className="tile-card__author">{authorName}</p> : null}
         </div>
       </div>
       <div className="tile-card__meta">
         <h3>{tile.title}</h3>
-        <p>{tile.tags.slice(0, 3).join(" · ")}</p>
+        {authorName ? <p className="tile-card__author">{authorName}</p> : null}
       </div>
     </Link>
   );

@@ -9,6 +9,7 @@ import { TileCard } from "../components/TileCard";
 import { trackEvent } from "../lib/events.server";
 import { getClientIp, getUserAgent } from "../lib/request.server";
 import { getUserFromRequest } from "../lib/auth.server";
+import { findUsersByIds } from "../lib/users.server";
 
 const USE_SAMPLE_TILES = true;
 
@@ -73,6 +74,10 @@ export async function loader({ request }: Route.LoaderArgs) {
     visibility: ["public"],
   });
 
+  const ownerIds = Array.from(new Set(items.map((tile) => tile.ownerId)));
+  const owners = await findUsersByIds(ownerIds);
+  const ownerMap = new Map(owners.map((owner) => [owner._id, owner]));
+
   const tiles = await Promise.all(
     items.map(async (tile) => {
       const previewKey = tile.r2.previewKey;
@@ -80,7 +85,9 @@ export async function loader({ request }: Route.LoaderArgs) {
       if (previewKey) {
         previewUrl = getR2PublicUrl(previewKey) || (await signDownloadUrl(previewKey));
       }
-      return { tile, previewUrl };
+      const owner = ownerMap.get(tile.ownerId);
+      const authorName = owner?.name ?? owner?.username ?? owner?.email ?? "Unknown";
+      return { tile, previewUrl, authorName };
     })
   );
 
@@ -159,8 +166,13 @@ export default function Home() {
     <main className="page">
       <div className="page__inner">
         <MasonryGrid>
-          {items.map(({ tile, previewUrl }) => (
-            <TileCard key={tile._id} tile={tile} previewUrl={previewUrl} />
+          {items.map(({ tile, previewUrl, authorName }) => (
+            <TileCard
+              key={tile._id}
+              tile={tile}
+              previewUrl={previewUrl}
+              authorName={authorName}
+            />
           ))}
           {showSamples
             ? SAMPLE_TILES.map((sample) => (

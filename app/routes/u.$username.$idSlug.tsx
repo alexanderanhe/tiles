@@ -94,6 +94,8 @@ export async function loader({ request, params }: Route.LoaderArgs) {
         viewer.role === "admin")
   );
 
+  const origin = env.APP_BASE_URL?.replace(/\/$/, "") || new URL(request.url).origin;
+  const canonicalUrl = `${origin}${canonical}`;
   return {
     tile,
     previewUrl,
@@ -102,6 +104,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     canDownload,
     isOwner,
     handle: canonicalHandle,
+    canonicalUrl,
   };
 }
 
@@ -112,6 +115,13 @@ export function meta({ data }: Route.MetaArgs) {
   return [
     { title: `${title} — Seamless Tiles` },
     { name: "description", content: description },
+    { property: "og:title", content: `${title} — Seamless Tiles` },
+    { property: "og:description", content: description },
+    ...(data?.previewUrl ? [{ property: "og:image", content: data.previewUrl }] : []),
+    { name: "twitter:title", content: `${title} — Seamless Tiles` },
+    { name: "twitter:description", content: description },
+    ...(data?.previewUrl ? [{ name: "twitter:image", content: data.previewUrl }] : []),
+    ...(data?.canonicalUrl ? [{ tagName: "link", rel: "canonical", href: data.canonicalUrl }] : []),
   ];
 }
 

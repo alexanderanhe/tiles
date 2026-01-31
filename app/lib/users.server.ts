@@ -65,6 +65,12 @@ export async function findUserByHandle(handle: string) {
   return isUuid ? null : findUserById(handle);
 }
 
+export async function findUsersByIds(ids: string[]) {
+  if (!ids.length) return [];
+  const { users } = await getCollections();
+  return users.find({ _id: { $in: ids } }).toArray();
+}
+
 export async function generateUniqueUsername(base: string) {
   const baseSlug = base
     .toLowerCase()
