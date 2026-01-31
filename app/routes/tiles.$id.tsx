@@ -80,7 +80,6 @@ export default function TileDetail() {
   const [editTags, setEditTags] = useState((tile.tags ?? []).join(", "));
   const [editVisibility, setEditVisibility] = useState(tile.visibility);
   const [editStatus, setEditStatus] = useState("");
-  const [finalizeStatus, setFinalizeStatus] = useState("");
   const hasBackground = Boolean(
     (location.state as { backgroundLocation?: Location })?.backgroundLocation
   );
@@ -144,25 +143,6 @@ export default function TileDetail() {
             <button
               className="btn-pill ghost"
               onClick={async () => {
-                setFinalizeStatus("Reintentando preview...");
-                const res = await fetch(`/api/tiles/${tile._id}/finalize`, {
-                  method: "POST",
-                });
-                if (!res.ok) {
-                  setFinalizeStatus("No se pudo generar el preview.");
-                  return;
-                }
-                setFinalizeStatus("Preview actualizado.");
-                navigate(0);
-              }}
-            >
-              Reintentar preview
-            </button>
-          ) : null}
-          {isOwner ? (
-            <button
-              className="btn-pill ghost"
-              onClick={async () => {
                 const confirmed = window.confirm("Eliminar este tile?");
                 if (!confirmed) return;
                 const res = await fetch(`/api/tiles/${tile._id}`, {
@@ -176,7 +156,6 @@ export default function TileDetail() {
             </button>
           ) : null}
         </div>
-        {finalizeStatus ? <p className="tile-detail__status">{finalizeStatus}</p> : null}
 
         {isOwner && editOpen ? (
           <div className="tile-detail__edit">

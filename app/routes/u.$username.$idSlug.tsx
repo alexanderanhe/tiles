@@ -7,7 +7,6 @@ import {
   HiPencilSquare,
   HiLink,
   HiEllipsisVertical,
-  HiArrowPath,
   HiTrash,
 } from "react-icons/hi2";
 import { initServer } from "../lib/init.server";
@@ -130,7 +129,6 @@ export default function UserTileDetail() {
     useLoaderData<typeof loader>();
   const navigate = useNavigate();
   const location = useLocation();
-  const [finalizeStatus, setFinalizeStatus] = useState("");
   const initials = (user.name ?? user.email ?? "")
     .split(" ")
     .filter(Boolean)
@@ -201,23 +199,6 @@ export default function UserTileDetail() {
                     Editar
                   </button>
                   <button
-                    onClick={async () => {
-                      setFinalizeStatus("Reintentando preview...");
-                      const res = await fetch(`/api/tiles/${tile._id}/finalize`, {
-                        method: "POST",
-                      });
-                      if (!res.ok) {
-                        setFinalizeStatus("No se pudo generar el preview.");
-                        return;
-                      }
-                      setFinalizeStatus("Preview actualizado.");
-                      navigate(0);
-                    }}
-                  >
-                    <HiArrowPath aria-hidden />
-                    Reintentar preview
-                  </button>
-                  <button
                     className="danger"
                     onClick={async () => {
                       const confirmed = window.confirm("Eliminar este tile?");
@@ -237,7 +218,6 @@ export default function UserTileDetail() {
             </div>
           </details>
         </div>
-        {finalizeStatus ? <p className="tile-detail__status">{finalizeStatus}</p> : null}
       </div>
 
       <div className="tile-page__content">

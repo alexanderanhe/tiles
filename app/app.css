@@ -445,9 +445,42 @@ body {
 }
 
 .generator__chips {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 8px;
+}
+
+.color-input {
+  display: grid;
+  grid-template-columns: 40px minmax(120px, 1fr);
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+}
+
+.color-input input[type="color"] {
+  -webkit-appearance: none;
+  appearance: none;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  height: 38px;
+  width: 40px;
+  padding: 0;
+  background: #fff;
+}
+
+.color-input input[type="text"] {
+  width: 100%;
+  min-width: 140px;
+}
+
+.color-input input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.color-input input[type="color"]::-webkit-color-swatch {
+  border: none;
+  border-radius: 10px;
 }
 
 .generator__preview-card {

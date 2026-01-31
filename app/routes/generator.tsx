@@ -32,6 +32,23 @@ function isHexColor(schema?: TemplateParamSchema) {
   return regex?.includes("#([0-9a-fA-F]{6})") ?? false;
 }
 
+function normalizeHexInput(value: string) {
+  const trimmed = value.trim();
+  if (/^#([0-9a-fA-F]{6})$/.test(trimmed)) return trimmed;
+  if (/^#([0-9a-fA-F]{3})$/.test(trimmed)) {
+    return (
+      "#" +
+      trimmed[1] +
+      trimmed[1] +
+      trimmed[2] +
+      trimmed[2] +
+      trimmed[3] +
+      trimmed[3]
+    );
+  }
+  return "#000000";
+}
+
 export default function Generator() {
   const [templates, setTemplates] = useState<TemplateMeta[]>([]);
   const [selectedId, setSelectedId] = useState<string>("");
@@ -125,16 +142,40 @@ export default function Generator() {
                           <span>{key}</span>
                           <div className="generator__chips">
                             {value.map((item, index) => (
-                              <input
-                                key={`${key}-${index}`}
-                                type={isHexColor(schema) ? "color" : "text"}
-                                value={item}
-                                onChange={(event) => {
-                                  const next = [...value];
-                                  next[index] = event.target.value;
-                                  updateParam(key, next);
-                                }}
-                              />
+                              <div key={`${key}-${index}`} className="color-input">
+                                {isHexColor(schema) ? (
+                                  <>
+                                    <input
+                                      type="color"
+                                      value={normalizeHexInput(item)}
+                                      onChange={(event) => {
+                                        const next = [...value];
+                                        next[index] = event.target.value;
+                                        updateParam(key, next);
+                                      }}
+                                    />
+                                    <input
+                                      type="text"
+                                      value={item}
+                                      onChange={(event) => {
+                                        const next = [...value];
+                                        next[index] = event.target.value;
+                                        updateParam(key, next);
+                                      }}
+                                    />
+                                  </>
+                                ) : (
+                                  <input
+                                    type="text"
+                                    value={item}
+                                    onChange={(event) => {
+                                      const next = [...value];
+                                      next[index] = event.target.value;
+                                      updateParam(key, next);
+                                    }}
+                                  />
+                                )}
+                              </div>
                             ))}
                             <button
                               className="btn-pill ghost"
@@ -150,12 +191,28 @@ export default function Generator() {
                     return (
                       <div key={key} className="generator__field">
                         <span>{key}</span>
-                        <input
-                          type={isHexColor(schema) ? "color" : "text"}
-                          maxLength={schema.max}
-                          value={(params[key] as string) ?? ""}
-                          onChange={(event) => updateParam(key, event.target.value)}
-                        />
+                        {isHexColor(schema) ? (
+                          <div className="color-input">
+                            <input
+                              type="color"
+                              value={normalizeHexInput((params[key] as string) ?? "")}
+                              onChange={(event) => updateParam(key, event.target.value)}
+                            />
+                            <input
+                              type="text"
+                              maxLength={schema.max}
+                              value={(params[key] as string) ?? ""}
+                              onChange={(event) => updateParam(key, event.target.value)}
+                            />
+                          </div>
+                        ) : (
+                          <input
+                            type="text"
+                            maxLength={schema.max}
+                            value={(params[key] as string) ?? ""}
+                            onChange={(event) => updateParam(key, event.target.value)}
+                          />
+                        )}
                       </div>
                     );
                   })}
