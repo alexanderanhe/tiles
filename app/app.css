@@ -138,12 +138,8 @@ body {
   height: 40px;
   width: 40px;
   border-radius: 12px;
-  background: #111;
-  color: #fff;
-  display: grid;
-  place-items: center;
-  font-weight: 700;
-  font-size: 14px;
+  display: block;
+  object-fit: cover;
 }
 
 .side-nav__links {

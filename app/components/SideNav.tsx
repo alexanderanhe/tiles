@@ -32,7 +32,11 @@ export function SideNav() {
 
   return (
     <aside className="side-nav">
-      <div className="side-nav__logo">ST</div>
+      <img
+        className="side-nav__logo"
+        src="/icon-192.svg"
+        alt="Seamless Tiles"
+      />
       <nav className="side-nav__links">
         {navItems.map((item) => {
           if (item.to === "/admin" && user?.role !== "admin") return null;
