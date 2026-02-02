@@ -43,6 +43,7 @@ export async function ensureIndexes() {
   await emailVerifications.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
   await tiles.createIndex({ ownerId: 1, createdAt: -1 });
+  await tiles.createIndex({ ownerId: 1, templateId: 1, createdAt: -1 });
   await tiles.createIndex({ visibility: 1, createdAt: -1 });
   await tiles.createIndex({ tags: 1 });
   await tiles.createIndex({ title: "text", description: "text", tags: "text" });

@@ -9,6 +9,7 @@ import {
   upsertActiveUser,
   findUserByEmail,
   updateUserRoleStatus,
+  setUserPassword,
 } from "../../lib/users.server";
 import { commitUserSession } from "../../lib/auth.server";
 import { getClientIp, getUserAgent } from "../../lib/request.server";
@@ -49,6 +50,7 @@ export async function action({ request }: Route.ActionArgs) {
   );
   console.log("Active user:", activeUser);
   if (!activeUser) return jsonError("User not found", 404);
+  await setUserPassword(activeUser._id, parsed.data.password);
 
   await trackEvent({
     type: "verify_success",

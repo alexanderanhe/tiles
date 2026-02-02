@@ -6,6 +6,7 @@ export interface User {
   email: string;
   name?: string;
   username?: string;
+  passwordHash?: string;
   role: UserRole;
   status: UserStatus;
   createdAt: Date;
@@ -40,6 +41,7 @@ export interface TileStats {
 export interface Tile {
   _id: string;
   ownerId: string;
+  templateId?: string;
   title: string;
   description?: string;
   tags: string[];

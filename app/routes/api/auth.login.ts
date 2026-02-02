@@ -6,7 +6,7 @@ import { loginSchema } from "../../lib/validation.server";
 import { checkRateLimit } from "../../lib/rateLimit.server";
 import { createEmailVerification } from "../../lib/verification.server";
 import { sendVerificationEmail } from "../../lib/resend.server";
-import { findUserByEmail, updateUserRoleStatus } from "../../lib/users.server";
+import { findUserByEmail, updateUserRoleStatus, verifyPassword } from "../../lib/users.server";
 import { commitUserSession } from "../../lib/auth.server";
 import { getClientIp, getUserAgent } from "../../lib/request.server";
 import { trackEvent } from "../../lib/events.server";
@@ -17,7 +17,7 @@ export async function action({ request }: Route.ActionArgs) {
   const parsed = loginSchema.safeParse(body);
   if (!parsed.success) return jsonError("Invalid input", 400);
 
-  const { email } = parsed.data;
+  const { email, password } = parsed.data;
   const ip = getClientIp(request);
   const rate = await checkRateLimit({
     key: `login:${ip}:${email}`,
@@ -33,6 +33,20 @@ export async function action({ request }: Route.ActionArgs) {
     await updateUserRoleStatus(user._id, { role: "creator" });
   }
   if (user.status === "active") {
+    if (!user.passwordHash) {
+      const code = await createEmailVerification(email);
+      await sendVerificationEmail(email, code);
+      await trackEvent({
+        type: "verify_sent",
+        userId: user._id,
+        ip,
+        userAgent: getUserAgent(request),
+      });
+      return jsonOk({ message: "Verification code sent", requiresPasswordSetup: true });
+    }
+    if (!password || !verifyPassword(password, user.passwordHash)) {
+      return jsonError("Invalid email or password", 401);
+    }
     const cookie = await commitUserSession({
       id: user._id,
       email: user.email,

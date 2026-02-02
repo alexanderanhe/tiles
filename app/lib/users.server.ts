@@ -160,6 +160,36 @@ export async function updateUserRoleStatus(
   return unwrapResult(result);
 }
 
+const PASSWORD_HASH_PREFIX = "scrypt";
+const PASSWORD_HASH_KEYLEN = 64;
+
+function hashPassword(password: string) {
+  const salt = crypto.randomBytes(16);
+  const hash = crypto.scryptSync(password, salt, PASSWORD_HASH_KEYLEN);
+  return `${PASSWORD_HASH_PREFIX}$${salt.toString("base64")}$${hash.toString(
+    "base64"
+  )}`;
+}
+
+export function verifyPassword(password: string, stored?: string) {
+  if (!stored) return false;
+  const [prefix, saltB64, hashB64] = stored.split("$");
+  if (prefix !== PASSWORD_HASH_PREFIX || !saltB64 || !hashB64) return false;
+  const salt = Buffer.from(saltB64, "base64");
+  const expected = Buffer.from(hashB64, "base64");
+  const actual = crypto.scryptSync(password, salt, expected.length);
+  return crypto.timingSafeEqual(actual, expected);
+}
+
+export async function setUserPassword(id: string, password: string) {
+  const { users } = await getCollections();
+  const passwordHash = hashPassword(password);
+  await users.updateOne(
+    { _id: id },
+    { $set: { passwordHash, updatedAt: new Date() } }
+  );
+}
+
 export async function updateLastLogin(id: string) {
   const { users } = await getCollections();
   await users.updateOne({ _id: id }, { $set: { lastLoginAt: new Date() } });

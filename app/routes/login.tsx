@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router";
 export default function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -12,7 +13,7 @@ export default function Login() {
       <div className="hero-card">
         <h1 className="text-3xl font-display">Welcome back</h1>
         <p className="mt-2 text-sm text-ink/70">
-          We’ll email you a 6-digit verification code.
+          Sign in with your email and password.
         </p>
 
         <form
@@ -24,7 +25,7 @@ export default function Login() {
             const response = await fetch("/api/auth/login", {
               method: "POST",
               headers: { "content-type": "application/json" },
-              body: JSON.stringify({ email }),
+              body: JSON.stringify({ email, password }),
             });
             setLoading(false);
             if (!response.ok) {
@@ -35,6 +36,10 @@ export default function Login() {
             const data = await response.json().catch(() => ({}));
             if (data?.user?.status === "active") {
               navigate("/");
+              return;
+            }
+            if (data?.requiresPasswordSetup) {
+              navigate(`/verify?email=${encodeURIComponent(email)}`);
               return;
             }
             navigate(`/verify?email=${encodeURIComponent(email)}`);
@@ -49,9 +54,19 @@ export default function Login() {
             onChange={(event) => setEmail(event.target.value)}
             required
           />
+          <input
+            className="input-field"
+            type="password"
+            name="password"
+            placeholder="Password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            minLength={8}
+            required
+          />
           {error ? <p className="text-sm text-red-600">{error}</p> : null}
           <button className="btn-primary" type="submit" disabled={loading}>
-            {loading ? "Sending..." : "Send code"}
+            {loading ? "Signing in..." : "Sign in"}
           </button>
         </form>
 

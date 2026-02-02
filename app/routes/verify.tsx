@@ -7,6 +7,8 @@ export default function Verify() {
   const initialEmail = params.get("email") ?? "";
   const [email, setEmail] = useState(initialEmail);
   const [code, setCode] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
@@ -18,7 +20,7 @@ export default function Verify() {
       <div className="hero-card">
         <h1 className="text-3xl font-display">Verify your email</h1>
         <p className="mt-2 text-sm text-ink/70">
-          Enter the 6-digit code we sent to your inbox.
+          Enter the 6-digit code and create your password to finish setup.
         </p>
 
         <form
@@ -26,11 +28,19 @@ export default function Verify() {
           onSubmit={async (event) => {
             event.preventDefault();
             setError("");
+            if (password.length < 8) {
+              setError("Password must be at least 8 characters");
+              return;
+            }
+            if (password !== confirm) {
+              setError("Passwords do not match");
+              return;
+            }
             setLoading(true);
             const response = await fetch("/api/auth/verify", {
               method: "POST",
               headers: { "content-type": "application/json" },
-              body: JSON.stringify({ email, code }),
+              body: JSON.stringify({ email, code, password }),
               credentials: "same-origin",
             });
             setLoading(false);
@@ -83,6 +93,26 @@ export default function Verify() {
             </div>
           </div>
           {error ? <p className="text-sm text-red-600">{error}</p> : null}
+          <input
+            className="input-field"
+            type="password"
+            name="password"
+            placeholder="New password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            minLength={8}
+            required
+          />
+          <input
+            className="input-field"
+            type="password"
+            name="confirm"
+            placeholder="Confirm password"
+            value={confirm}
+            onChange={(event) => setConfirm(event.target.value)}
+            minLength={8}
+            required
+          />
           <button className="btn-primary" type="submit" disabled={loading}>
             {loading ? "Verifying..." : "Verify"}
           </button>

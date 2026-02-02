@@ -68,10 +68,6 @@ export default function Generator() {
       .then((data) => {
         if (data?.templates) {
           setTemplates(data.templates);
-          if (data.templates[0]) {
-            setSelectedId(data.templates[0].id);
-            setParams(data.templates[0].defaults ?? {});
-          }
         }
       });
   }, []);
@@ -145,7 +141,7 @@ export default function Generator() {
           {templates.map((template) => {
             const samples = template.samples ?? [];
             const bigSample = samples[0];
-            const smallSamples = [samples[1], samples[2], samples[3], undefined];
+            const smallSamples = [samples[1], samples[2]];
             return (
               <button
                 key={template.id}

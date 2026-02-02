@@ -5,6 +5,7 @@ import type { Tile, TileVisibility } from "./types";
 export async function createTile(params: {
   id?: string;
   ownerId: string;
+  templateId?: string;
   title: string;
   description?: string;
   tags?: string[];
@@ -20,6 +21,7 @@ export async function createTile(params: {
   const tile: Tile = {
     _id: params.id ?? crypto.randomUUID(),
     ownerId: params.ownerId,
+    templateId: params.templateId,
     title: params.title,
     description: params.description ?? "",
     tags: params.tags ?? [],

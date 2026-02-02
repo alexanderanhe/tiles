@@ -80,12 +80,22 @@ export async function action({ request }: Route.ActionArgs) {
   const parsed = schema.safeParse(params);
   if (!parsed.success) return jsonError("Invalid params", 400);
 
-  const themeKey = (parsed.data as Record<string, string>).themeKey;
-  const themeTextInput = String(
-    (parsed.data as Record<string, string>).themeText ?? ""
-  ).trim();
-  const themeText = themeTextInput || template.themeOptions?.[themeKey];
-  if (!themeText) return jsonError("Invalid theme", 400);
+  const parsedParams = parsed.data as Record<string, unknown>;
+  const hasThemeParams = "themeKey" in parsedParams || "themeText" in parsedParams;
+  const shouldUseTheme = Boolean(template.themeOptions) && hasThemeParams;
+  let themeKey = "";
+  let themeTextInput = "";
+  let themeText = "";
+  let themeLabel = "";
+  if (shouldUseTheme) {
+    themeKey = String((parsedParams as Record<string, string>).themeKey ?? "");
+    themeTextInput = String(
+      (parsedParams as Record<string, string>).themeText ?? ""
+    ).trim();
+    themeText = themeTextInput || template.themeOptions?.[themeKey] || "";
+    if (!themeText) return jsonError("Invalid theme", 400);
+    themeLabel = themeTextInput || themeKey;
+  }
 
   for (const value of Object.values(parsed.data)) {
     if (Array.isArray(value) && value.length > 5) {
@@ -94,38 +104,44 @@ export async function action({ request }: Route.ActionArgs) {
   }
 
   const derived = deriveParams(parsed.data);
-  const themeLabel = themeTextInput || themeKey;
   const baseInstructions =
-    "You must generate a true seamless tile. Edges must match perfectly on all sides. " +
-    "No borders, no seams, repeatable pattern. Square format. Flat 2D illustration. " +
-    "Crayon/wax pastel doodle style with visible grain and imperfect strokes. " +
-    "No gradients, no shadows, no realism. No logos, no watermarks, no signatures. " +
-    "No text unless explicitly required by the theme.";
-  const safeInput = {
-    themeKey,
-    themeDescription: themeText,
-    themeText: themeTextInput,
-    backgroundColor: (parsed.data as Record<string, string>).backgroundColor,
-    crayonColors: (parsed.data as Record<string, string[]>).crayonColors,
-  };
+    template.id === "crayon-seamless-doodle-v2"
+      ? "You must generate a true seamless tile. Edges must match perfectly on all sides. " +
+        "No borders, no seams, repeatable pattern. Square format. Flat 2D illustration. " +
+        "Crayon/wax pastel doodle style with visible grain and imperfect strokes. " +
+        "No gradients, no shadows, no realism. No logos, no watermarks, no signatures. " +
+        "No text unless explicitly required by the theme."
+      : "";
 
-  const normalizedColors = (
-    (parsed.data as Record<string, string[]>).crayonColors ?? []
-  )
-    .map(normalizeHex)
-    .sort();
+  const safeInput = shouldUseTheme
+    ? {
+        ...parsedParams,
+        themeDescription: themeText,
+      }
+    : { ...parsedParams };
+
+  const cacheParams = shouldUseTheme
+    ? {
+        ...parsedParams,
+        themeText: normalizeText(themeText),
+        backgroundColor: normalizeHex(
+          String((parsedParams as Record<string, string>).backgroundColor ?? "")
+        ),
+        crayonColors: (
+          ((parsedParams as Record<string, string[]>).crayonColors ?? []) as string[]
+        )
+          .map(normalizeHex)
+          .sort(),
+      }
+    : parsedParams;
+
   const cacheKey = buildCacheKey({
     templateId: template.id,
     model: template.model ?? env.OPENAI_IMAGE_MODEL,
     size: template.size ?? env.OPENAI_IMAGE_SIZE,
     output_format: template.output_format ?? env.OPENAI_IMAGE_OUTPUT_FORMAT,
     background: template.background ?? env.OPENAI_IMAGE_BACKGROUND,
-    themeKey,
-    themeText: normalizeText(themeText),
-    backgroundColor: normalizeHex(
-      (parsed.data as Record<string, string>).backgroundColor
-    ),
-    crayonColors: normalizedColors,
+    params: cacheParams,
   });
 
   const existing = await findTileByCacheKey(cacheKey);
@@ -145,12 +161,8 @@ export async function action({ request }: Route.ActionArgs) {
     }
   }
 
-  const prompt =
-    baseInstructions +
-    "\n" +
-    template.promptTemplate +
-    "\nINPUT_JSON=" +
-    JSON.stringify(safeInput);
+  const promptParts = [baseInstructions, template.promptTemplate].filter(Boolean);
+  const prompt = `${promptParts.join("\n")}\nINPUT_JSON=${JSON.stringify(safeInput)}`;
 
   const model = template.model ?? env.OPENAI_IMAGE_MODEL;
   const size = template.size ?? env.OPENAI_IMAGE_SIZE;
@@ -205,14 +217,14 @@ export async function action({ request }: Route.ActionArgs) {
 
   const title = template.titleTemplate
     ? renderPrompt(template.titleTemplate, {
-        ...parsed.data,
+        ...parsedParams,
         ...derived,
         themeLabel,
       })
     : `${template.name} — ${String(parsed.data?.theme ?? "AI")}`;
   const description = template.descriptionTemplate
     ? renderPrompt(template.descriptionTemplate, {
-        ...parsed.data,
+        ...parsedParams,
         ...derived,
         themeLabel,
       })
@@ -227,6 +239,7 @@ export async function action({ request }: Route.ActionArgs) {
     const clone = await createTile({
       id: cloneId,
       ownerId: user.id,
+      templateId: template.id,
       title,
       description,
       tags: tagList,
@@ -268,6 +281,7 @@ export async function action({ request }: Route.ActionArgs) {
   const tile = await createTile({
     id: tileId,
     ownerId: user.id,
+    templateId: template.id,
     title,
     description,
     tags: tagList,
