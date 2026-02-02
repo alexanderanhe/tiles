@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "react-router build",
+    "build": "react-router build && node scripts/copy-templates.mjs",
     "dev": "react-router dev",
     "start": "PORT=3011 dotenv -e .env.production -- react-router-serve ./build/server/index.js",
     "typecheck": "react-router typegen && tsc",

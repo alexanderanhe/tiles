@@ -80,6 +80,7 @@ export default function TileDetail() {
   const [editTags, setEditTags] = useState((tile.tags ?? []).join(", "));
   const [editVisibility, setEditVisibility] = useState(tile.visibility);
   const [editStatus, setEditStatus] = useState("");
+  const [publishStatus, setPublishStatus] = useState("");
   const hasBackground = Boolean(
     (location.state as { backgroundLocation?: Location })?.backgroundLocation
   );
@@ -131,6 +132,28 @@ export default function TileDetail() {
           >
             Copiar enlace
           </button>
+          {isOwner && tile.visibility === "private" ? (
+            <button
+              className="btn-pill"
+              onClick={async () => {
+                setPublishStatus("");
+                const response = await fetch(`/api/tiles/${tile._id}`, {
+                  method: "PATCH",
+                  headers: { "content-type": "application/json" },
+                  body: JSON.stringify({ visibility: "public" }),
+                });
+                if (!response.ok) {
+                  setPublishStatus("No se pudo publicar.");
+                  return;
+                }
+                setPublishStatus("Publicado.");
+                setEditVisibility("public");
+                navigate(0);
+              }}
+            >
+              Publicar
+            </button>
+          ) : null}
           {isOwner ? (
             <button
               className="btn-pill ghost"
@@ -229,6 +252,7 @@ export default function TileDetail() {
             {editStatus ? <p className="tile-detail__status">{editStatus}</p> : null}
           </div>
         ) : null}
+        {publishStatus ? <p className="tile-detail__status">{publishStatus}</p> : null}
 
         <div className="tile-detail__stats">
           <p>Formato: {tile.format ?? "original"}</p>

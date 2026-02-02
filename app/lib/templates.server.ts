@@ -31,6 +31,7 @@ export interface PromptTemplate {
   description?: string;
   paramsSchema: Record<string, TemplateParamSchema>;
   themeOptions?: Record<string, string>;
+  samples?: string[];
   promptTemplate: string;
   defaults?: Record<string, unknown>;
   titleTemplate?: string;
@@ -48,6 +49,7 @@ const templateSchema = z.object({
   description: z.string().optional(),
   paramsSchema: z.record(z.any()),
   themeOptions: z.record(z.string()).optional(),
+  samples: z.array(z.string().min(1)).optional(),
   promptTemplate: z.string().min(1),
   defaults: z.record(z.any()).optional(),
   titleTemplate: z.string().optional(),

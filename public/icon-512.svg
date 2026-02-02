@@ -1,4 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="120" fill="#111111"/>
-  <text x="50%" y="52%" text-anchor="middle" dominant-baseline="middle" font-family="Montserrat, Arial, sans-serif" font-size="200" fill="#ffffff" font-weight="700">ST</text>
+  <defs>
+    <pattern id="diag" patternUnits="userSpaceOnUse" width="48" height="48" patternTransform="rotate(45)">
+      <rect width="48" height="48" fill="#ffffff"/>
+      <rect width="24" height="48" fill="#e53935"/>
+    </pattern>
+  </defs>
+  <rect width="512" height="512" rx="120" fill="url(#diag)"/>
+  <rect x="36" y="36" width="440" height="440" rx="104" fill="none" stroke="#111111" stroke-width="20"/>
+  <text x="50%" y="53%" text-anchor="middle" dominant-baseline="middle" font-family="Montserrat, Arial, sans-serif" font-size="240" fill="#111111" font-weight="700">S</text>
 </svg>

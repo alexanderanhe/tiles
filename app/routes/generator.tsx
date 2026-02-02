@@ -1,6 +1,7 @@
 import type { Route } from "./+types/generator";
 import { useEffect, useMemo, useState } from "react";
 import { requireUser } from "../lib/auth.server";
+import { MasonryGrid } from "../components/MasonryGrid";
 
 interface TemplateParamSchema {
   type: "string" | "array";
@@ -20,6 +21,7 @@ interface TemplateMeta {
   paramsSchema: Record<string, TemplateParamSchema>;
   defaults?: Record<string, unknown>;
   themeOptions?: Record<string, string>;
+  samples?: string[];
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -57,6 +59,8 @@ export default function Generator() {
   const [resultUrl, setResultUrl] = useState<string>("");
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const [error, setError] = useState<string>("");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [view, setView] = useState<"browse" | "result">("browse");
 
   useEffect(() => {
     fetch("/api/templates")
@@ -81,38 +85,116 @@ export default function Generator() {
     setParams((prev) => ({ ...prev, [key]: value }));
   }
 
+  function openTemplate(template: TemplateMeta) {
+    setSelectedId(template.id);
+    setParams(template.defaults ?? {});
+    setError("");
+    setModalOpen(true);
+  }
+
+  const content =
+    view === "result" ? (
+      <section className="generator-result">
+        <div className="generator-result__card">
+          <div className="generator-result__media">
+            {previewUrl ? (
+              <img src={previewUrl} alt="AI result" />
+            ) : (
+              <div className="tile-card__placeholder">Generando...</div>
+            )}
+          </div>
+          <div className="generator-result__actions">
+            <h1>Listo</h1>
+            <p className="text-sm text-gray-500">
+              Tu tile fue generado. Puedes crear otro o continuar con la edicion.
+            </p>
+            <div className="generator-result__buttons">
+              <button
+                className="btn-pill ghost"
+                onClick={() => {
+                  setView("browse");
+                  setResultUrl("");
+                  setPreviewUrl("");
+                }}
+              >
+                Generar nueva
+              </button>
+              <button
+                className="btn-pill primary"
+                disabled={!resultUrl}
+                onClick={() => {
+                  if (!resultUrl) return;
+                  window.location.href = resultUrl;
+                }}
+              >
+                Continuar
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+    ) : (
+      <section className="generator-catalog">
+        <div className="generator-catalog__header">
+          <h1>Generator</h1>
+          <p className="text-sm text-gray-500">
+            Genera tiles seamless con templates parametrizados.
+          </p>
+        </div>
+        <MasonryGrid>
+          {templates.map((template) => {
+            const samples = template.samples ?? [];
+            const bigSample = samples[0];
+            const smallSamples = [samples[1], samples[2], samples[3], undefined];
+            return (
+              <button
+                key={template.id}
+                className={`template-card tile-card ${
+                  template.id === selectedId ? "is-active" : ""
+                }`}
+                onClick={() => openTemplate(template)}
+              >
+                <div className="template-card__preview">
+                  <div className="template-card__big">
+                    {bigSample ? (
+                      <img src={bigSample} alt={template.name} />
+                    ) : (
+                      <div className="template-card__placeholder">Preview</div>
+                    )}
+                  </div>
+                  <div className="template-card__smalls">
+                    {smallSamples.map((sample, index) => (
+                      <div key={`${template.id}-small-${index}`} className="template-card__small">
+                        {sample ? (
+                          <img src={sample} alt={`${template.name} sample ${index + 2}`} />
+                        ) : (
+                          <div className="template-card__placeholder">+</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="template-card__label">
+                  <h3>{template.name}</h3>
+                  <p>{template.description}</p>
+                </div>
+              </button>
+            );
+          })}
+        </MasonryGrid>
+      </section>
+    );
+
   return (
     <main className="page">
       <div className="page__inner">
-        <section className="generator">
-          <div className="generator__panel">
-            <h1>Generator</h1>
-            <p className="text-sm text-gray-500">
-              Genera tiles seamless con templates parametrizados.
-            </p>
-
-            <div className="generator__section">
-              <label>Template</label>
-              <div className="generator__template-grid">
-                {templates.map((template) => (
-                  <button
-                    key={template.id}
-                    className={`template-card ${
-                      template.id === selectedId ? "is-active" : ""
-                    }`}
-                    onClick={() => {
-                      setSelectedId(template.id);
-                      setParams(template.defaults ?? {});
-                    }}
-                  >
-                    <h3>{template.name}</h3>
-                    <p>{template.description}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {selected ? (
+        {content}
+        {modalOpen && selected ? (
+          <div className="modal-overlay">
+            <div className="modal-card generator-modal">
+              <button className="modal-close" onClick={() => setModalOpen(false)}>
+                ✕
+              </button>
               <div className="generator__section">
                 <label>Parametros</label>
                 <div className="generator__fields">
@@ -218,57 +300,42 @@ export default function Generator() {
                   })}
                 </div>
               </div>
-            ) : null}
 
-            {error ? <p className="text-red-500 text-sm">{error}</p> : null}
+              {error ? <p className="text-red-500 text-sm">{error}</p> : null}
 
-            <button
-              className="btn-pill primary"
-              disabled={loading}
-              onClick={async () => {
-                setLoading(true);
-                setError("");
-                setResultUrl("");
-                setPreviewUrl("");
-                try {
-                  const res = await fetch("/api/ai/generate", {
-                    method: "POST",
-                    headers: { "content-type": "application/json" },
-                    body: JSON.stringify({ templateId: selectedId, params }),
-                  });
-                  const data = await res.json();
-                  if (!res.ok) {
-                    setError(data?.error ?? "Failed to generate");
-                  } else {
-                    setResultUrl(data?.detailUrl ?? "");
-                    setPreviewUrl(data?.previewUrl ?? "");
+              <button
+                className="btn-pill primary"
+                disabled={loading}
+                onClick={async () => {
+                  setLoading(true);
+                  setError("");
+                  setResultUrl("");
+                  setPreviewUrl("");
+                  try {
+                    const res = await fetch("/api/ai/generate", {
+                      method: "POST",
+                      headers: { "content-type": "application/json" },
+                      body: JSON.stringify({ templateId: selectedId, params }),
+                    });
+                    const data = await res.json();
+                    if (!res.ok) {
+                      setError(data?.error ?? "Failed to generate");
+                    } else {
+                      setResultUrl(data?.detailUrl ?? "");
+                      setPreviewUrl(data?.previewUrl ?? "");
+                      setView("result");
+                      setModalOpen(false);
+                    }
+                  } finally {
+                    setLoading(false);
                   }
-                } finally {
-                  setLoading(false);
-                }
-              }}
-            >
-              {loading ? "Generando..." : "Generate"}
-            </button>
-          </div>
-
-          <div className="generator__preview">
-            <div className="generator__preview-card">
-              {previewUrl ? (
-                <div className="generator__preview-inner">
-                  <img src={previewUrl} alt="AI result" />
-                  {resultUrl ? (
-                    <a className="btn-pill" href={resultUrl}>
-                      Ver detalle
-                    </a>
-                  ) : null}
-                </div>
-              ) : (
-                <p className="text-sm text-gray-500">El resultado aparecera aqui.</p>
-              )}
+                }}
+              >
+                {loading ? "Generando..." : "Generate"}
+              </button>
             </div>
           </div>
-        </section>
+        ) : null}
       </div>
     </main>
   );
