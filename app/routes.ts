@@ -32,6 +32,11 @@ export default [
 
   route("api/events/view", "routes/api/events.view.ts"),
   route("api/events/search", "routes/api/events.search.ts"),
+  route("api/prompts", "routes/api/prompts.ts"),
   route("api/templates", "routes/api/templates.ts"),
+  route("api/prompts/:id/options", "routes/api/prompts.$id.options.ts"),
+  route("api/prompts/:id/palettes", "routes/api/prompts.$id.palettes.ts"),
+  route("api/prompts/:id/debug", "routes/api/prompts.$id.debug.ts"),
+  route("api/render", "routes/api/render.ts"),
   route("api/ai/generate", "routes/api/ai.generate.ts"),
 ] satisfies RouteConfig;

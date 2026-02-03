@@ -7,6 +7,7 @@
     "dev": "react-router dev",
     "start": "PORT=3011 dotenv -e .env.production -- react-router-serve ./build/server/index.js",
     "typecheck": "react-router typegen && tsc",
+    "test": "node --test --loader tsx",
     "cleanup:tiles": "node scripts/cleanup-tiles.mjs"
   },
   "dependencies": {
@@ -34,6 +35,7 @@
     "@types/react-dom": "^19.2.3",
     "dotenv-cli": "^11.0.0",
     "tailwindcss": "^4.1.13",
+    "tsx": "^4.20.5",
     "typescript": "^5.9.2",
     "vite": "^7.1.7",
     "vite-tsconfig-paths": "^5.1.4"

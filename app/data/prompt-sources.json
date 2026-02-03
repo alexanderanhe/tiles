@@ -1,0 +1,78 @@
+[
+  {
+    "id": "seamless-city-map-v1",
+    "provider": "wikidata",
+    "version": "2026-02-03",
+    "cache": { "ttlSeconds": 86400 },
+    "sanitization": {
+      "maxLength": 80,
+      "allowedPattern": "A-Za-z0-9 ,.'-"
+    },
+    "paramProviders": {
+      "cityId": {
+        "type": "search",
+        "searchParam": "q",
+        "limit": 20,
+        "labelKey": "cityLabel"
+      },
+      "primaryLandmarkId": {
+        "type": "dependent",
+        "dependsOn": ["cityId"],
+        "limit": 20,
+        "labelKey": "primaryLandmarkLabel",
+        "query": {
+          "sparql": "SELECT DISTINCT ?id ?label WHERE { VALUES ?type { wd:Q570116 wd:Q22698 wd:Q174782 wd:Q41176 wd:Q1190554 } ?id wdt:P31/wdt:P279* ?type . ?id (wdt:P131|wdt:P276) wd:{{cityId}} . OPTIONAL { ?id rdfs:label ?labelEn FILTER(LANG(?labelEn) = \"en\") } OPTIONAL { ?id rdfs:label ?labelAny } BIND(COALESCE(?labelEn, ?labelAny) AS ?label) } LIMIT {{limit}}"
+        }
+      },
+      "naturalElementId": {
+        "type": "dependent",
+        "dependsOn": ["cityId"],
+        "limit": 20,
+        "labelKey": "naturalElementLabel",
+        "query": {
+          "sparql": "SELECT DISTINCT ?id ?label WHERE { VALUES ?type { wd:Q4022 wd:Q23397 wd:Q12284 wd:Q12323 wd:Q34763 } ?id wdt:P31/wdt:P279* ?type . ?id (wdt:P131|wdt:P276) wd:{{cityId}} . OPTIONAL { ?id rdfs:label ?labelEn FILTER(LANG(?labelEn) = \"en\") } OPTIONAL { ?id rdfs:label ?labelAny } BIND(COALESCE(?labelEn, ?labelAny) AS ?label) } LIMIT {{limit}}"
+        }
+      }
+    },
+    "entityResolver": {
+      "provider": "wikidata",
+      "config": { "labelLang": "en" }
+    }
+  },
+  {
+    "id": "crayon-seamless-doodle-v2",
+    "provider": "wikidata",
+    "version": "2026-02-03",
+    "cache": { "ttlSeconds": 86400 },
+    "sanitization": {
+      "maxLength": 60,
+      "allowedPattern": "A-Za-z0-9 ,.'-"
+    },
+    "color": {
+      "engines": ["thecolorapi", "colormind"],
+      "defaultEngine": "thecolorapi",
+      "cache": { "ttlSeconds": 86400 },
+      "limits": { "palettes": 8, "minColors": 3, "maxColors": 5 },
+      "strategies": [
+        { "id": "pastel-crayon", "backgroundPolicy": "pastel", "mode": "analogic", "count": 5 },
+        { "id": "vibrant-kids", "backgroundPolicy": "light", "mode": "triad", "count": 5 }
+      ]
+    },
+    "paramProviders": {
+      "themeId": {
+        "type": "search",
+        "searchParam": "q",
+        "limit": 20,
+        "labelKey": "themeLabel",
+        "keywordsKey": "themeKeywords",
+        "query": {
+          "sparql": "SELECT DISTINCT ?id ?label WHERE { SERVICE wikibase:mwapi { bd:serviceParam wikibase:endpoint \"www.wikidata.org\" . bd:serviceParam wikibase:api \"EntitySearch\" . bd:serviceParam mwapi:search \"{{q}}\" . bd:serviceParam mwapi:language \"en\" . bd:serviceParam mwapi:limit {{limit}} . ?id wikibase:apiOutputItem mwapi:item . } VALUES ?type { wd:Q2221906 wd:Q3010242 wd:Q132241 wd:Q35120 wd:Q105256 } ?id wdt:P31/wdt:P279* ?type . OPTIONAL { ?id rdfs:label ?labelEn FILTER(LANG(?labelEn) = \"en\") } OPTIONAL { ?id rdfs:label ?labelAny } BIND(COALESCE(?labelEn, ?labelAny) AS ?label) } LIMIT {{limit}}"
+        }
+      }
+    },
+    "entityResolver": {
+      "provider": "wikidata",
+      "config": { "labelLangs": ["es", "en"], "aliasLangs": ["es", "en"] }
+    }
+  }
+]

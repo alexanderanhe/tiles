@@ -6,7 +6,7 @@ import { requireUser } from "../../lib/auth.server";
 import { findTileById, updateTileR2 } from "../../lib/tiles.server";
 import { getObject, headObject, putObject } from "../../lib/r2.client.server";
 import { streamToBuffer } from "../../lib/streams.server";
-import { applyWatermark, getImageMetadata } from "../../lib/watermark.server";
+import { applyWatermark, createThumbnail, getImageMetadata } from "../../lib/watermark.server";
 
 export async function action({ request, params }: Route.ActionArgs) {
   await initServer();
@@ -33,12 +33,15 @@ export async function action({ request, params }: Route.ActionArgs) {
 
   const preview = await applyWatermark(body, 1600);
   const thumb = await applyWatermark(body, 400);
+  const cleanThumb = await createThumbnail(body, 400);
 
   const previewKey = `tiles/${tile._id}/preview.webp`;
   const thumbKey = `tiles/${tile._id}/thumb.webp`;
+  const thumbCleanKey = `tiles/${tile._id}/thumb-clean.webp`;
 
   await putObject(previewKey, preview.data, "image/webp");
   await putObject(thumbKey, thumb.data, "image/webp");
+  await putObject(thumbCleanKey, cleanThumb.data, "image/webp");
 
   await updateTileR2(
     tile._id,
@@ -46,6 +49,7 @@ export async function action({ request, params }: Route.ActionArgs) {
       masterKey: tile.r2.masterKey,
       previewKey,
       thumbKey,
+      thumbCleanKey,
       sizeBytes: Number(head.ContentLength ?? 0),
       etag: head.ETag?.replace(/\"/g, ""),
     },
@@ -60,6 +64,7 @@ export async function action({ request, params }: Route.ActionArgs) {
     tileId: tile._id,
     previewKey,
     thumbKey,
+    thumbCleanKey,
   });
 }
 

@@ -39,6 +39,13 @@ export async function applyWatermark(input: Buffer, targetWidth: number) {
     .toBuffer({ resolveWithObject: true });
 }
 
+export async function createThumbnail(input: Buffer, targetWidth: number) {
+  return sharp(input)
+    .resize({ width: targetWidth, withoutEnlargement: true })
+    .webp({ quality: 88 })
+    .toBuffer({ resolveWithObject: true });
+}
+
 export async function getImageMetadata(input: Buffer) {
   const image = sharp(input);
   const metadata = await image.metadata();

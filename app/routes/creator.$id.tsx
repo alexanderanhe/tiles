@@ -25,7 +25,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 
   const tiles = await Promise.all(
     items.map(async (tile) => {
-      const previewKey = tile.r2.previewKey;
+      const previewKey = tile.r2.thumbCleanKey || tile.r2.previewKey;
       let previewUrl = "";
       if (previewKey) {
         previewUrl = getR2PublicUrl(previewKey) || (await signDownloadUrl(previewKey));

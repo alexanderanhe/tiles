@@ -4,11 +4,13 @@ import { initServer } from "../../lib/init.server";
 import { json, jsonError, jsonOk } from "../../lib/api";
 import { requireUser, requireRole } from "../../lib/auth.server";
 import { findTileById, incrementTileStats } from "../../lib/tiles.server";
-import { signDownloadUrl } from "../../lib/r2.client.server";
+import { getObject, headObject, putObject, signDownloadUrl } from "../../lib/r2.client.server";
 import { checkRateLimit } from "../../lib/rateLimit.server";
 import { env } from "../../lib/env.server";
 import { getClientIp, getUserAgent } from "../../lib/request.server";
 import { trackEvent } from "../../lib/events.server";
+import { streamToBuffer } from "../../lib/streams.server";
+import sharp from "sharp";
 
 export async function loader({ request, params }: Route.LoaderArgs) {
   await initServer();
@@ -34,6 +36,13 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     return jsonError("Master not available", 400);
   }
 
+  const urlObj = new URL(request.url);
+  const sizeParam = urlObj.searchParams.get("size");
+  const allowedSizes = new Set(["256", "512", "768", "1024", "2048", "4096"]);
+  if (sizeParam && sizeParam !== "original" && !allowedSizes.has(sizeParam)) {
+    return jsonError("Invalid size", 400);
+  }
+
   await trackEvent({
     type: "download_attempt",
     userId: user.id,
@@ -42,7 +51,25 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     userAgent: getUserAgent(request),
   });
 
-  const url = await signDownloadUrl(tile.r2.masterKey);
+  let url = "";
+  if (!sizeParam || sizeParam === "original") {
+    url = await signDownloadUrl(tile.r2.masterKey);
+  } else {
+    const size = Number(sizeParam);
+    const sizedKey = `tiles/${tile._id}/download-${size}.webp`;
+    const exists = await headObject(sizedKey).catch(() => null);
+    if (!exists) {
+      const object = await getObject(tile.r2.masterKey);
+      const body = await streamToBuffer(object.Body ?? null);
+      if (!body.length) return jsonError("Master file empty", 400);
+      const resized = await sharp(body)
+        .resize({ width: size, height: size, fit: "inside", withoutEnlargement: true })
+        .webp({ quality: 90 })
+        .toBuffer();
+      await putObject(sizedKey, resized, "image/webp");
+    }
+    url = await signDownloadUrl(sizedKey);
+  }
 
   await trackEvent({
     type: "download_success",

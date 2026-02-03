@@ -30,6 +30,18 @@ export interface PromptTemplate {
   name: string;
   description?: string;
   paramsSchema: Record<string, TemplateParamSchema>;
+  uiHints?: Record<
+    string,
+    {
+      widget: string;
+      label?: string;
+      description?: string;
+      dependsOn?: string[];
+      supportsSuggestions?: boolean;
+      min?: number;
+      max?: number;
+    }
+  >;
   themeOptions?: Record<string, string>;
   samples?: string[];
   promptTemplate: string;
@@ -48,6 +60,7 @@ const templateSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
   paramsSchema: z.record(z.any()),
+  uiHints: z.record(z.any()).optional(),
   themeOptions: z.record(z.string()).optional(),
   samples: z.array(z.string().min(1)).optional(),
   promptTemplate: z.string().min(1),
@@ -79,6 +92,15 @@ async function readTemplatesFile(): Promise<PromptTemplate[]> {
   return templates;
 }
 
+async function getTemplatesCacheVersion() {
+  try {
+    const stat = await fs.stat(getTemplatesPath());
+    return String(stat.mtimeMs);
+  } catch {
+    return "0";
+  }
+}
+
 export interface TemplateStore {
   listTemplates(): Promise<PromptTemplate[]>;
   getTemplate(id: string): Promise<PromptTemplate | null>;
@@ -87,7 +109,8 @@ export interface TemplateStore {
 export class JsonTemplateStore implements TemplateStore {
   async listTemplates() {
     const redis = getRedis();
-    const cacheKey = "templates:list";
+    const version = await getTemplatesCacheVersion();
+    const cacheKey = `templates:list:${version}`;
     if (redis) {
       const cached = await redis.get(cacheKey);
       if (cached) return JSON.parse(cached) as PromptTemplate[];
@@ -102,7 +125,8 @@ export class JsonTemplateStore implements TemplateStore {
 
   async getTemplate(id: string) {
     const redis = getRedis();
-    const cacheKey = `templates:${id}`;
+    const version = await getTemplatesCacheVersion();
+    const cacheKey = `templates:${id}:${version}`;
     if (redis) {
       const cached = await redis.get(cacheKey);
       if (cached) return JSON.parse(cached) as PromptTemplate;

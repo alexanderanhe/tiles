@@ -8,6 +8,7 @@ import {
   HiLink,
   HiEllipsisVertical,
   HiTrash,
+  HiArrowsPointingOut,
 } from "react-icons/hi2";
 import { initServer } from "../lib/init.server";
 import { findUserByHandle } from "../lib/users.server";
@@ -62,9 +63,11 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   const previewKey = tile.r2.previewKey;
   const previewUrl = previewKey
     ? getR2PublicUrl(previewKey) || (await signDownloadUrl(previewKey))
-    : isOwner && tile.r2.masterKey
+    : "";
+  const displayUrl =
+    viewer && tile.r2.masterKey
       ? await signDownloadUrl(tile.r2.masterKey)
-      : "";
+      : previewUrl;
 
   const relatedResult = await listTiles({
     ownerId: user._id,
@@ -76,7 +79,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     relatedResult.items
       .filter((item) => item._id !== tile._id)
       .map(async (item) => {
-        const key = item.r2.previewKey;
+        const key = item.r2.thumbCleanKey || item.r2.previewKey;
         let url = "";
         if (key) {
           url = getR2PublicUrl(key) || (await signDownloadUrl(key));
@@ -98,6 +101,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   return {
     tile,
     previewUrl,
+    displayUrl,
     user,
     related,
     canDownload,
@@ -125,10 +129,13 @@ export function meta({ data }: Route.MetaArgs) {
 }
 
 export default function UserTileDetail() {
-  const { tile, previewUrl, user, related, canDownload, isOwner, handle } =
+  const { tile, previewUrl, displayUrl, user, related, canDownload, isOwner, handle } =
     useLoaderData<typeof loader>();
   const navigate = useNavigate();
   const location = useLocation();
+  const [tilePreviewOpen, setTilePreviewOpen] = useState(false);
+  const [downloadOpen, setDownloadOpen] = useState(false);
+  const [downloadLoading, setDownloadLoading] = useState(false);
   const initials = (user.name ?? user.email ?? "")
     .split(" ")
     .filter(Boolean)
@@ -152,35 +159,33 @@ export default function UserTileDetail() {
           </div>
         </div>
         <div className="tile-page__actions">
-          {canDownload ? (
+          {previewUrl ? (
             <button
-              className="btn-pill primary"
-              onClick={async () => {
-                const response = await fetch(`/api/tiles/${tile._id}/download`, {
-                  credentials: "same-origin",
-                });
-                if (!response.ok) {
-                  navigate("/login");
-                  return;
-                }
-                const data = await response.json();
-                if (data?.url) window.location.href = data.url;
-              }}
-              aria-label="Descargar original"
-              title="Descargar original"
+              className="btn-pill ghost"
+              onClick={() => setTilePreviewOpen(true)}
+              aria-label="Ver tile infinito"
+              title="Ver tile infinito"
             >
-              <HiArrowDownTray aria-hidden />
+              <HiArrowsPointingOut aria-hidden />
             </button>
-          ) : (
-            <button
-              className="btn-pill primary"
-              onClick={() => navigate("/login")}
-              aria-label="Iniciar sesión"
-              title="Iniciar sesión"
-            >
-              <HiArrowDownTray aria-hidden />
-            </button>
-          )}
+          ) : null}
+          <button
+            className="btn-pill primary"
+            onClick={() => {
+              if (!canDownload) {
+                const redirect = encodeURIComponent(
+                  `${location.pathname}${location.search}`
+                );
+                navigate(`/login?redirect=${redirect}`);
+                return;
+              }
+              setDownloadOpen(true);
+            }}
+            aria-label="Descargar"
+            title="Descargar"
+          >
+            <HiArrowDownTray aria-hidden />
+          </button>
           <details className="tile-actions-menu">
             <summary className="btn-pill ghost" aria-label="Mas acciones" title="Mas acciones">
               <HiEllipsisVertical aria-hidden />
@@ -222,8 +227,8 @@ export default function UserTileDetail() {
 
       <div className="tile-page__content">
         <div className="tile-page__image">
-          {previewUrl ? (
-            <img src={previewUrl} alt={tile.title} />
+          {displayUrl ? (
+            <img src={displayUrl} alt={tile.title} />
           ) : (
             <div className="tile-card__placeholder">Processing...</div>
           )}
@@ -266,6 +271,76 @@ export default function UserTileDetail() {
             ))}
           </MasonryGrid>
         </section>
+      ) : null}
+      {tilePreviewOpen && previewUrl ? (
+        <div className="tile-preview-modal" role="dialog" aria-modal="true">
+          <button
+            className="tile-preview-modal__close"
+            onClick={() => setTilePreviewOpen(false)}
+            aria-label="Cerrar"
+          >
+            ✕
+          </button>
+          <div
+            className="tile-preview-modal__canvas"
+            style={{ backgroundImage: `url(${displayUrl || previewUrl})` }}
+          />
+        </div>
+      ) : null}
+      {downloadOpen ? (
+        <div className="tile-download-modal" role="dialog" aria-modal="true">
+          <div className="tile-download-modal__card">
+            <button
+              className="tile-download-modal__close"
+              onClick={() => setDownloadOpen(false)}
+              aria-label="Cerrar"
+            >
+              ✕
+            </button>
+            <h3>Descargar</h3>
+            <p>Selecciona un tamaño.</p>
+            <div className="tile-download-modal__grid">
+              {[
+                { label: "Original", value: "original" },
+                { label: "256 px", value: "256" },
+                { label: "512 px", value: "512" },
+                { label: "768 px", value: "768" },
+                { label: "1024 px", value: "1024" },
+                { label: "2048 px", value: "2048" },
+                { label: "4096 px", value: "4096" },
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  className="btn-pill ghost"
+                  disabled={downloadLoading}
+                  onClick={async () => {
+                    setDownloadLoading(true);
+                    try {
+                      const response = await fetch(
+                        `/api/tiles/${tile._id}/download?size=${option.value}`,
+                        { credentials: "same-origin" }
+                      );
+                      if (!response.ok) {
+                        const redirect = encodeURIComponent(
+                          `${location.pathname}${location.search}`
+                        );
+                        navigate(`/login?redirect=${redirect}`);
+                        return;
+                      }
+                      const data = await response.json();
+                      if (data?.url) window.location.href = data.url;
+                    } finally {
+                      setDownloadLoading(false);
+                      setDownloadOpen(false);
+                    }
+                  }}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       ) : null}
     </div>
   );

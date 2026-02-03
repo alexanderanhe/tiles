@@ -4,8 +4,7 @@
     "name": "Crayon Doodle Seamless",
     "description": "Patron seamless doodle con textura de crayola",
     "paramsSchema": {
-      "themeKey": { "type": "string", "enum": ["birthday", "baptism", "baby", "school", "forest", "space"] },
-      "themeText": { "type": "string", "min": 0, "max": 50, "regex": "^$|^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9 ,.'-]{2,50}$" },
+      "themeId": { "type": "string", "regex": "^Q[0-9]+$" },
       "backgroundColor": { "type": "string", "regex": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$" },
       "crayonColors": {
         "type": "array",
@@ -14,21 +13,22 @@
         "items": { "type": "string", "regex": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$" }
       }
     },
-    "themeOptions": {
-      "birthday": "birthday party doodles",
-      "baptism": "baptism celebration symbols",
-      "baby": "baby shower icons",
-      "school": "school supplies and playful learning icons",
-      "forest": "forest animals and leaves",
-      "space": "planets, stars, rockets"
+    "uiHints": {
+      "themeId": {
+        "widget": "searchSelect",
+        "label": "Tema",
+        "description": "Celebración, festividad o ceremonia",
+        "searchParam": "q"
+      },
+      "backgroundColor": { "widget": "color", "supportsSuggestions": true },
+      "crayonColors": { "widget": "colorArray", "min": 3, "max": 5, "supportsSuggestions": true }
     },
-    "promptTemplate": "Use the INPUT_JSON values only. Create a seamless, tileable illustration pattern designed to repeat infinitely without visible seams on all edges (left, right, top, bottom). Follow the style and technique: Hand-drawn, childlike doodle style; Crayon / wax pastel texture, clearly visible grain and uneven strokes; Slightly imperfect lines, organic, playful, and warm; Flat 2D illustration, no realism, no gradients, no shadows, no depth; Consistent stroke thickness across all elements. Color rules: Background color must match INPUT_JSON.backgroundColor. Drawing colors must be ONLY INPUT_JSON.crayonColors. No additional colors, no black, no white unless explicitly included. Illustration content must match INPUT_JSON.themeDescription. Fill the canvas with many small, evenly distributed doodles. Avoid large focal elements; all drawings should be small and repetitive. Balance density evenly across the entire canvas. Seamless tiling requirements (CRITICAL): All elements near the edges must continue logically on the opposite edges; No element may be cut in a way that creates visible borders; The pattern must align perfectly when repeated horizontally and vertically; The design must be a true seamless tile suitable for CSS backgrounds and large repeating surfaces. Composition constraints: Square format (1:1 aspect ratio); No text unless explicitly required by INPUT_JSON.themeDescription; No logos, no watermarks, no signatures; No perspective, no lighting effects. Output intent: High-resolution seamless pattern; Designed specifically for web backgrounds, wallpapers, and UI surfaces.",
+    "promptTemplate": "Use the INPUT_JSON values only. Create a seamless, tileable illustration pattern designed to repeat infinitely without visible seams on all edges (left, right, top, bottom). Follow the style and technique: Hand-drawn, childlike doodle style; Crayon / wax pastel texture, clearly visible grain and uneven strokes; Slightly imperfect lines, organic, playful, and warm; Flat 2D illustration, no realism, no gradients, no shadows, no depth; Consistent stroke thickness across all elements. Color rules: Background color must match INPUT_JSON.backgroundColor. Drawing colors must be ONLY INPUT_JSON.crayonColors. No additional colors, no black, no white unless explicitly included. Illustration content must match INPUT_JSON.themeLabel and related symbols described by INPUT_JSON.themeKeywords. Fill the canvas with many small, evenly distributed doodles. Avoid large focal elements; all drawings should be small and repetitive. Balance density evenly across the entire canvas. Seamless tiling requirements (CRITICAL): All elements near the edges must continue logically on the opposite edges; No element may be cut in a way that creates visible borders; The pattern must align perfectly when repeated horizontally and vertically; The design must be a true seamless tile suitable for CSS backgrounds and large repeating surfaces. Composition constraints: Square format (1:1 aspect ratio); No text unless explicitly required by INPUT_JSON.themeLabel; No logos, no watermarks, no signatures; No perspective, no lighting effects. Output intent: High-resolution seamless pattern; Designed specifically for web backgrounds, wallpapers, and UI surfaces.",
     "titleTemplate": "Crayon Doodle — {{themeLabel}}",
     "descriptionTemplate": "Doodles con textura de crayola para {{themeLabel}} en un tile seamless.",
-    "tags": ["crayon", "doodle", "seamless", "{{themeKey}}"],
+    "tags": ["crayon", "doodle", "seamless", "{{themeLabel}}"],
     "defaults": {
-      "themeKey": "birthday",
-      "themeText": "",
+      "themeId": "Q1968651",
       "backgroundColor": "#FFF7E6",
       "crayonColors": ["#FF6B6B", "#FFD93D", "#6BCB77"]
     },
@@ -42,37 +42,29 @@
     "name": "Seamless City Map",
     "description": "Mapa urbano realista y seamless con un landmark y un elemento natural.",
     "paramsSchema": {
-      "cityName": {
-        "type": "string",
-        "enum": ["Paris", "Mexico City", "New York", "Tokyo", "London"]
+      "cityId": { "type": "string", "regex": "^Q[0-9]+$" },
+      "primaryLandmarkId": { "type": "string", "regex": "^Q[0-9]+$" },
+      "naturalElementId": { "type": "string", "regex": "^Q[0-9]+$" }
+    },
+    "uiHints": {
+      "cityId": { "widget": "searchSelect", "label": "Ciudad", "searchParam": "q" },
+      "primaryLandmarkId": {
+        "widget": "searchSelect",
+        "label": "Landmark",
+        "dependsOn": ["cityId"]
       },
-      "primaryLandmark": {
-        "type": "string",
-        "enum": [
-          "Eiffel Tower–inspired structure",
-          "Zócalo-inspired central plaza",
-          "Central Park–inspired green space",
-          "Tokyo Tower–inspired structure"
-        ]
-      },
-      "naturalElement": {
-        "type": "string",
-        "enum": [
-          "river inspired by the Seine",
-          "water element inspired by the ancient lakes of the Valley of Mexico",
-          "river inspired by the Hudson River",
-          "river inspired by the Sumida River"
-        ]
+      "naturalElementId": {
+        "widget": "searchSelect",
+        "label": "Elemento natural",
+        "dependsOn": ["cityId"]
       }
     },
-    "promptTemplate": "Use the INPUT_JSON values only. Create an ultra-detailed, large-scale seamless city map designed to repeat infinitely without visible seams on all edges (left, right, top, bottom). City theme: A realistic urban environment inspired by INPUT_JSON.cityName. The city must feel authentic and believable, inspired by real street layouts, districts, and architecture of INPUT_JSON.cityName, but it must NOT be an exact real-world map. Style and rendering: Highly realistic ISOMETRIC 3D city illustration; Elevated isometric perspective with visible building height and depth; Professional, high-fidelity visual style; Clean, precise linework with realistic materials and textures; Matte, architectural visualization finish; Natural proportions and accurate urban scale; NOT flat, NOT cartographic, NOT blueprint; NOT cartoon, NOT doodle, NOT sketch, NOT crayon. Urban layout: Dense urban fabric inspired by INPUT_JSON.cityName; Realistic city blocks with visible building volume; Mix of wide avenues, secondary streets, and narrow roads; Streets must appear recessed between buildings (3D depth); Integrated parks, plazas, and green areas with elevation variation; The city must feel vast, continuous, and immersive in three dimensions. Unique landmark constraints (VERY IMPORTANT): Include EXACTLY ONE INPUT_JSON.primaryLandmark; The landmark must be rendered in full 3D isometric form; Integrated naturally into the urban fabric; Must NOT be centered; Must NOT dominate the composition. Include EXACTLY ONE INPUT_JSON.naturalElement; The element must flow naturally through the city; It must have visible depth and elevation. No other major landmarks or iconic structures are allowed. Do NOT duplicate the landmark or natural element anywhere else in the pattern. Seamless tiling requirements (CRITICAL): The image MUST be a true seamless tile; Streets, blocks, parks, and the natural element must connect perfectly across all edges; Any street or natural feature exiting one edge must re-enter logically on the opposite edge; No cut buildings, no broken streets, no partial landmarks; No visible borders, seams, or edge artifacts; Designed explicitly for infinite horizontal and vertical tiling. Color and lighting: Realistic urban color palette inspired by INPUT_JSON.cityName; Buildings in natural stone, concrete, or local material tones; Streets in neutral asphalt tones; Green areas in natural, slightly desaturated greens; Water or natural elements in muted, realistic tones; Soft global illumination with subtle ambient occlusion; No strong directional shadows, no dramatic lighting. Perspective and composition (STRICT): TRUE isometric 3D perspective (approximately 30–45 degree angle); Visible building height and volume; No flat top-down map view; No orthographic cartographic projection; Consistent isometric angle across the entire image. Composition constraints: Square format (1:1 aspect ratio); No text, no labels, no street names; No logos, no watermarks, no signatures; No people or vehicles as focal elements. Output intent: Ultra-high-resolution seamless ISOMETRIC city tile; Suitable for premium repeating backgrounds, architectural visualizations, posters, UI surfaces, and large-scale visualizations; The final result must feel immersive, three-dimensional, and architecturally coherent when tiled infinitely. Failure condition: If the result appears flat, cartographic, or top-down, the output is INVALID.",
-    "titleTemplate": "Seamless City — {{cityName}}",
-    "descriptionTemplate": "Mapa seamless inspirado en {{cityName}} con un landmark y un elemento natural.",
-    "tags": ["city", "map", "seamless", "{{cityName}}"],
+    "promptTemplate": "Use the INPUT_JSON values only. Create an ultra-detailed, large-scale seamless city map designed to repeat infinitely without visible seams on all edges (left, right, top, bottom). City theme: A realistic urban environment inspired by INPUT_JSON.cityLabel. The city must feel authentic and believable, inspired by real street layouts, districts, and architecture of INPUT_JSON.cityLabel, but it must NOT be an exact real-world map. Style and rendering: Highly realistic ISOMETRIC 3D city illustration; Elevated isometric perspective with visible building height and depth; Professional, high-fidelity visual style; Clean, precise linework with realistic materials and textures; Matte, architectural visualization finish; Natural proportions and accurate urban scale; NOT flat, NOT cartographic, NOT blueprint; NOT cartoon, NOT doodle, NOT sketch, NOT crayon. Urban layout: Dense urban fabric inspired by INPUT_JSON.cityLabel; Realistic city blocks with visible building volume; Mix of wide avenues, secondary streets, and narrow roads; Streets must appear recessed between buildings (3D depth); Integrated parks, plazas, and green areas with elevation variation; The city must feel vast, continuous, and immersive in three dimensions. Unique landmark constraints (VERY IMPORTANT): Include EXACTLY ONE INPUT_JSON.primaryLandmarkLabel; The landmark must be rendered in full 3D isometric form; Integrated naturally into the urban fabric; Must NOT be centered; Must NOT dominate the composition. Include EXACTLY ONE INPUT_JSON.naturalElementLabel; The element must flow naturally through the city; It must have visible depth and elevation. No other major landmarks or iconic structures are allowed. Do NOT duplicate the landmark or natural element anywhere else in the pattern. Seamless tiling requirements (CRITICAL): The image MUST be a true seamless tile; Streets, blocks, parks, and the natural element must connect perfectly across all edges; Any street or natural feature exiting one edge must re-enter logically on the opposite edge; No cut buildings, no broken streets, no partial landmarks; No visible borders, seams, or edge artifacts; Designed explicitly for infinite horizontal and vertical tiling. Color and lighting: Realistic urban color palette inspired by INPUT_JSON.cityLabel; Buildings in natural stone, concrete, or local material tones; Streets in neutral asphalt tones; Green areas in natural, slightly desaturated greens; Water or natural elements in muted, realistic tones; Soft global illumination with subtle ambient occlusion; No strong directional shadows, no dramatic lighting. Perspective and composition (STRICT): TRUE isometric 3D perspective (approximately 30–45 degree angle); Visible building height and volume; No flat top-down map view; No orthographic cartographic projection; Consistent isometric angle across the entire image. Composition constraints: Square format (1:1 aspect ratio); No text, no labels, no street names; No logos, no watermarks, no signatures; No people or vehicles as focal elements. Output intent: Ultra-high-resolution seamless ISOMETRIC city tile; Suitable for premium repeating backgrounds, architectural visualizations, posters, UI surfaces, and large-scale visualizations; The final result must feel immersive, three-dimensional, and architecturally coherent when tiled infinitely. Failure condition: If the result appears flat, cartographic, or top-down, the output is INVALID.",
+    "titleTemplate": "Seamless City — {{cityLabel}}",
+    "descriptionTemplate": "Mapa seamless inspirado en {{cityLabel}} con un landmark y un elemento natural.",
+    "tags": ["city", "map", "seamless", "{{cityLabel}}"],
     "defaults": {
-      "cityName": "Paris",
-      "primaryLandmark": "Eiffel Tower–inspired structure",
-      "naturalElement": "river inspired by the Seine"
+      "cityId": "Q90"
     },
     "model": "gpt-image-1",
     "size": "1024x1024",

@@ -7,6 +7,10 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const redirect =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("redirect")
+      : null;
 
   return (
     <main className="mx-auto flex max-w-lg flex-col gap-6 px-4 pb-20 pt-12">
@@ -35,7 +39,7 @@ export default function Login() {
             }
             const data = await response.json().catch(() => ({}));
             if (data?.user?.status === "active") {
-              navigate("/");
+              navigate(redirect || "/");
               return;
             }
             if (data?.requiresPasswordSetup) {

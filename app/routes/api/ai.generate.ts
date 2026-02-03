@@ -14,8 +14,9 @@ import {
   deriveParams,
   renderPrompt,
 } from "../../lib/templates.server";
+import { JsonPromptSourceStore, resolvePromptInput } from "../../lib/prompt-sources.server";
 import { getR2PublicUrl, putObject, signDownloadUrl } from "../../lib/r2.client.server";
-import { applyWatermark, getImageMetadata } from "../../lib/watermark.server";
+import { applyWatermark, createThumbnail, getImageMetadata } from "../../lib/watermark.server";
 import { createTile, findTileByCacheKey, updateTileR2 } from "../../lib/tiles.server";
 import { trackEvent } from "../../lib/events.server";
 import { getClientIp, getUserAgent } from "../../lib/request.server";
@@ -74,6 +75,8 @@ export async function action({ request }: Route.ActionArgs) {
   const template = await store.getTemplate(body.templateId);
   if (!template) return jsonError("Template not found", 404);
   assertTemplateSafe(template);
+  const sourceStore = new JsonPromptSourceStore();
+  const source = await sourceStore.getSource(template.id);
 
   const params = applyDefaults(body.params ?? {}, template.defaults);
   const schema = buildParamsSchema(template.paramsSchema);
@@ -103,7 +106,37 @@ export async function action({ request }: Route.ActionArgs) {
     }
   }
 
-  const derived = deriveParams(parsed.data);
+  let safeInput = shouldUseTheme
+    ? {
+        ...parsedParams,
+        themeDescription: themeText,
+      }
+    : { ...parsedParams };
+
+  if (source) {
+    try {
+      const resolved = await resolvePromptInput({
+        template,
+        source,
+        params: safeInput,
+      });
+      safeInput = resolved.safeInput;
+    } catch (error) {
+      return jsonError(
+        error instanceof Error ? error.message : "Failed to resolve params",
+        400
+      );
+    }
+  }
+  if (!source && template.id === "crayon-seamless-doodle-v2") {
+    safeInput = {
+      ...safeInput,
+      themeLabel: "celebration doodles",
+      themeKeywords: "party, balloons, confetti",
+    };
+  }
+
+  const derived = deriveParams(safeInput);
   const baseInstructions =
     template.id === "crayon-seamless-doodle-v2"
       ? "You must generate a true seamless tile. Edges must match perfectly on all sides. " +
@@ -112,13 +145,6 @@ export async function action({ request }: Route.ActionArgs) {
         "No gradients, no shadows, no realism. No logos, no watermarks, no signatures. " +
         "No text unless explicitly required by the theme."
       : "";
-
-  const safeInput = shouldUseTheme
-    ? {
-        ...parsedParams,
-        themeDescription: themeText,
-      }
-    : { ...parsedParams };
 
   const cacheParams = shouldUseTheme
     ? {
@@ -209,29 +235,32 @@ export async function action({ request }: Route.ActionArgs) {
   const metadata = await getImageMetadata(buffer);
   const preview = await applyWatermark(buffer, 1600);
   const thumb = await applyWatermark(buffer, 400);
+  const cleanThumb = await createThumbnail(buffer, 400);
 
   const previewKey = `tiles/${tileId}/preview.webp`;
   const thumbKey = `tiles/${tileId}/thumb.webp`;
+  const thumbCleanKey = `tiles/${tileId}/thumb-clean.webp`;
   await putObject(previewKey, preview.data, "image/webp");
   await putObject(thumbKey, thumb.data, "image/webp");
+  await putObject(thumbCleanKey, cleanThumb.data, "image/webp");
 
   const title = template.titleTemplate
     ? renderPrompt(template.titleTemplate, {
-        ...parsedParams,
+        ...safeInput,
         ...derived,
         themeLabel,
       })
     : `${template.name} — ${String(parsed.data?.theme ?? "AI")}`;
   const description = template.descriptionTemplate
     ? renderPrompt(template.descriptionTemplate, {
-        ...parsedParams,
+        ...safeInput,
         ...derived,
         themeLabel,
       })
     : template.description ?? "AI generated seamless tile";
   const tagList = template.tags?.length
     ? template.tags.map((tag) =>
-        renderPrompt(tag, { ...parsed.data, ...derived, themeLabel })
+        renderPrompt(tag, { ...safeInput, ...derived, themeLabel })
       )
     : [String(parsed.data?.theme ?? "ai")];
   if (existing && existing.ownerId !== user.id) {
@@ -303,6 +332,7 @@ export async function action({ request }: Route.ActionArgs) {
       masterKey,
       previewKey,
       thumbKey,
+      thumbCleanKey,
       sizeBytes: buffer.length,
       etag: undefined,
     },

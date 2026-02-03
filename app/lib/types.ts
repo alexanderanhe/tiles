@@ -29,6 +29,7 @@ export interface TileR2Info {
   masterKey: string;
   previewKey?: string;
   thumbKey?: string;
+  thumbCleanKey?: string;
   sizeBytes?: number;
   etag?: string;
 }
