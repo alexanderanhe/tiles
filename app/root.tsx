@@ -6,6 +6,7 @@ import {
   Scripts,
   ScrollRestoration,
   useLocation,
+  useNavigate,
 } from "react-router";
 import type { Location } from "react-router";
 import { useEffect } from "react";
@@ -13,6 +14,8 @@ import { useEffect } from "react";
 import type { Route } from "./+types/root";
 import "./app.css";
 import { getUserFromRequest } from "./lib/auth.server";
+import { initServer } from "./lib/init.server";
+import { listTopTags } from "./lib/tiles.server";
 import { TopNav } from "./components/TopNav";
 import { SideNav } from "./components/SideNav";
 import { MobileNav } from "./components/MobileNav";
@@ -59,15 +62,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
+  await initServer();
   const user = await getUserFromRequest(request);
-  return { user };
+  const topTags = await listTopTags({ limit: 5 }).catch(() => []);
+  return { user, topTags };
 }
 
 export default function App() {
   const location = useLocation();
+  const navigate = useNavigate();
   const state = location.state as { backgroundLocation?: Location } | null;
   const backgroundLocation = state?.backgroundLocation;
-  const isModalSource = backgroundLocation?.pathname === "/";
+  const isModalSource = Boolean(backgroundLocation);
   const path = location.pathname;
   const isAuthRoute =
     path.startsWith("/login") ||
@@ -94,7 +100,12 @@ export default function App() {
       <MobileNav />
       {isModalSource ? (
         <div className="modal-overlay">
-          <Outlet />
+          <div className="modal-card tile-modal">
+            <button className="modal-close" onClick={() => navigate(-1)}>
+              ✕
+            </button>
+            <Outlet />
+          </div>
         </div>
       ) : null}
     </div>

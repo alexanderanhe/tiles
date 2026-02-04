@@ -21,6 +21,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     q: params.q ?? "",
     tags: params.tags ?? "",
     sort: params.sort ?? "new",
+    ai: params.ai,
     page: params.page ?? "1",
     limit: params.limit ?? "24",
   });
@@ -35,6 +36,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     q: parsed.data.q,
     tags,
     sort: parsed.data.sort,
+    ai: parsed.data.ai,
     page: parsed.data.page,
     limit: parsed.data.limit,
     visibility: ["public"],
@@ -86,6 +88,7 @@ export async function action({ request }: Route.ActionArgs) {
     visibility: parsed.data.visibility,
     format: parsed.data.format,
     masterKey: `tiles/${tileId}/master`,
+    meta: parsed.data.aiGenerated ? { aiGenerated: true } : undefined,
   });
 
   await trackEvent({

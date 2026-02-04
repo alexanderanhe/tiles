@@ -378,6 +378,17 @@ body {
   border-radius: 16px;
 }
 
+.tile-section {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.tile-section__title {
+  font-size: 18px;
+  font-weight: 700;
+}
+
 .generator {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -948,11 +959,17 @@ body {
 .tile-card__overlay h3 {
   font-size: 14px;
   font-weight: 600;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
 }
 
 .tile-card__overlay p {
   font-size: 12px;
   opacity: 0.85;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+.tile-card__overlay .tile-card__author {
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .tile-card__author {

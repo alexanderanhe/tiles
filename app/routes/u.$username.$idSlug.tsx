@@ -257,7 +257,7 @@ export default function UserTileDetail() {
         </aside>
       </div>
 
-      {related.length ? (
+      {!hasBackground && related.length ? (
         <section className="tile-page__related">
           <h2>Mas de {user.name ?? user.username ?? "este creador"}</h2>
           <MasonryGrid>

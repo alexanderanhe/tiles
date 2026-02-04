@@ -18,12 +18,10 @@ export function TileCard({
   const slug = slugify(tile.title ?? "");
   const handle = ownerHandle ?? tile.ownerId;
   const tileUrl = `/u/${handle}/${tile._id}${slug ? `-${slug}` : ""}`;
-  const isHome = location.pathname === "/";
-
   return (
     <Link
       to={tileUrl}
-      state={isHome ? { backgroundLocation: location } : undefined}
+      state={{ backgroundLocation: location }}
       className="tile-card"
     >
       <div className="tile-card__image">

@@ -52,6 +52,8 @@ export async function loader({ request }: Route.LoaderArgs) {
   const q = url.searchParams.get("q") ?? "";
   const tagsParam = url.searchParams.get("tags") ?? "";
   const tags = tagsParam.split(",").map((tag) => tag.trim()).filter(Boolean);
+  const sortParam = url.searchParams.get("sort") ?? "";
+  const aiParam = url.searchParams.get("ai") ?? "";
   const page = Number(url.searchParams.get("page") ?? "1");
 
   if (q || tags.length) {
@@ -71,6 +73,8 @@ export async function loader({ request }: Route.LoaderArgs) {
     tags,
     page,
     limit,
+    ai: aiParam === "only" ? "only" : aiParam === "exclude" ? "exclude" : undefined,
+    sort: sortParam === "popular" ? "popular" : q || tags.length ? "new" : "popular",
     visibility: ["public"],
   });
 
@@ -91,7 +95,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     })
   );
 
-  return { tiles, q, tags, page, total, limit };
+  return { tiles, q, tags, page, total, limit, sort: sortParam, ai: aiParam };
 }
 
 export function meta({}: Route.MetaArgs) {
@@ -102,7 +106,7 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export default function Home() {
-  const { tiles, total, limit, q, tags } = useLoaderData<typeof loader>();
+  const { tiles, total, limit, q, tags, sort, ai } = useLoaderData<typeof loader>();
   const showSamples = USE_SAMPLE_TILES && tiles.length === 0;
   const [items, setItems] = useState(tiles);
   const [page, setPage] = useState(1);
@@ -129,6 +133,8 @@ export default function Home() {
         const params = new URLSearchParams();
         if (q) params.set("q", q);
         if (tags.length) params.set("tags", tags.join(","));
+        if (sort) params.set("sort", sort);
+        if (ai) params.set("ai", ai);
         params.set("page", String(nextPage));
         params.set("limit", String(limit));
         fetch(`/api/tiles?${params.toString()}`)
@@ -165,33 +171,49 @@ export default function Home() {
   return (
     <main className="page">
       <div className="page__inner">
-        <MasonryGrid>
-          {items.map(({ tile, previewUrl, authorName }) => (
-            <TileCard
-              key={tile._id}
-              tile={tile}
-              previewUrl={previewUrl}
-              authorName={authorName}
-            />
-          ))}
-          {showSamples
-            ? SAMPLE_TILES.map((sample) => (
-                <div key={sample.id} className="tile-card">
-                  <div className="tile-card__image">
-                    <img src={sample.url} alt={sample.title} loading="lazy" />
-                    <div className="tile-card__overlay">
-                      <h3>{sample.title}</h3>
-                      <p>Demo preview</p>
-                    </div>
-                  </div>
-                  <div className="tile-card__meta">
+        {showSamples ? (
+          <MasonryGrid>
+            {SAMPLE_TILES.map((sample) => (
+              <div key={sample.id} className="tile-card">
+                <div className="tile-card__image">
+                  <img src={sample.url} alt={sample.title} loading="lazy" />
+                  <div className="tile-card__overlay">
                     <h3>{sample.title}</h3>
                     <p>Demo preview</p>
                   </div>
                 </div>
-              ))
-            : null}
-        </MasonryGrid>
+                <div className="tile-card__meta">
+                  <h3>{sample.title}</h3>
+                  <p>Demo preview</p>
+                </div>
+              </div>
+            ))}
+          </MasonryGrid>
+        ) : (
+          <section className="tile-section">
+            <h2 className="tile-section__title">
+              {ai === "only"
+                ? "Generadas por IA"
+                : tags.length
+                  ? tags.join(", ")
+                  : sort === "popular"
+                    ? "Destacados"
+                    : q
+                      ? `Resultados para "${q}"`
+                      : "Recientes"}
+            </h2>
+            <MasonryGrid>
+              {items.map(({ tile, previewUrl, authorName }) => (
+                <TileCard
+                  key={tile._id}
+                  tile={tile}
+                  previewUrl={previewUrl}
+                  authorName={authorName}
+                />
+              ))}
+            </MasonryGrid>
+          </section>
+        )}
         {!showSamples && hasMore ? (
           <div ref={sentinelRef} className="py-6 text-center text-sm text-gray-500">
             {loadingMore ? "Cargando más..." : "Cargar más"}

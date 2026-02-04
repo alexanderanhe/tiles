@@ -29,6 +29,7 @@ export const tileCreateSchema = z.object({
   seamless: z.boolean().default(true),
   visibility: z.enum(["public", "unlisted", "private"]).default("public"),
   format: z.string().min(3).max(10).optional(),
+  aiGenerated: z.boolean().optional().default(false),
 });
 
 export const tileUpdateSchema = z.object({
@@ -36,12 +37,14 @@ export const tileUpdateSchema = z.object({
   description: z.string().max(1000).optional(),
   tags: z.array(z.string().min(1).max(40)).optional(),
   visibility: z.enum(["public", "unlisted", "private"]).optional(),
+  aiGenerated: z.boolean().optional(),
 });
 
 export const tileListSchema = z.object({
   q: z.string().optional().default(""),
   tags: z.string().optional().default(""),
   sort: z.enum(["new", "popular"]).optional().default("new"),
+  ai: z.enum(["only", "exclude"]).optional(),
   page: z.coerce.number().min(1).default(1),
   limit: z.coerce.number().min(1).max(60).default(24),
 });

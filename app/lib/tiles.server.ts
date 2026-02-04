@@ -77,9 +77,11 @@ export async function listTiles(params: {
   limit?: number;
   visibility?: TileVisibility[];
   ownerId?: string;
+  ai?: "only" | "exclude";
 }) {
   const { tiles } = await getCollections();
   const query: Record<string, unknown> = {};
+  const andFilters: Record<string, unknown>[] = [];
 
   if (params.visibility?.length) {
     query.visibility = { $in: params.visibility };
@@ -90,18 +92,42 @@ export async function listTiles(params: {
   }
 
   if (params.q) {
-    query.$text = { $search: params.q };
+    const escaped = params.q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const pattern = new RegExp(escaped, "i");
+    andFilters.push({
+      $or: [{ title: pattern }, { description: pattern }, { tags: pattern }],
+    });
   }
 
   if (params.ownerId) {
     query.ownerId = params.ownerId;
   }
 
+  if (params.ai === "only") {
+    andFilters.push({
+      $or: [
+        { templateId: { $exists: true, $ne: null } },
+        { "meta.aiGenerated": true },
+      ],
+    });
+  } else if (params.ai === "exclude") {
+    andFilters.push({
+      $nor: [
+        { templateId: { $exists: true, $ne: null } },
+        { "meta.aiGenerated": true },
+      ],
+    });
+  }
+
+  if (andFilters.length) {
+    query.$and = andFilters;
+  }
+
   const page = params.page ?? 1;
   const limit = params.limit ?? 24;
   const sort =
     params.sort === "popular"
-      ? { "stats.downloads": -1, createdAt: -1 }
+      ? { "stats.downloads": -1, "stats.views": -1, createdAt: -1 }
       : { createdAt: -1 };
 
   const items = await tiles
@@ -113,6 +139,22 @@ export async function listTiles(params: {
 
   const total = await tiles.countDocuments(query);
   return { items, total };
+}
+
+export async function listTopTags(params: { limit?: number } = {}) {
+  const { tiles } = await getCollections();
+  const limit = params.limit ?? 6;
+  const result = await tiles
+    .aggregate<{ _id: string; count: number }>([
+      { $match: { visibility: "public", tags: { $exists: true, $ne: [] } } },
+      { $unwind: "$tags" },
+      { $match: { tags: { $type: "string", $ne: "" } } },
+      { $group: { _id: "$tags", count: { $sum: 1 } } },
+      { $sort: { count: -1, _id: 1 } },
+      { $limit: limit },
+    ])
+    .toArray();
+  return result.map((row) => row._id);
 }
 
 export async function incrementTileStats(id: string, field: "views" | "downloads") {

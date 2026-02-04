@@ -55,6 +55,9 @@ export async function action({ request, params }: Route.ActionArgs) {
   if (parsed.data.description !== undefined) update.description = parsed.data.description;
   if (parsed.data.tags !== undefined) update.tags = parsed.data.tags;
   if (parsed.data.visibility !== undefined) update.visibility = parsed.data.visibility;
+  if (parsed.data.aiGenerated !== undefined) {
+    update["meta.aiGenerated"] = parsed.data.aiGenerated;
+  }
 
   await updateTileMeta(tile._id, update);
   return jsonOk({ ok: true });

@@ -20,6 +20,7 @@ export default function Upload() {
   const [dragActive, setDragActive] = useState(false);
   const [completedTiles, setCompletedTiles] = useState<string[]>([]);
   const [replaceExisting, setReplaceExisting] = useState(true);
+  const [aiGenerated, setAiGenerated] = useState(false);
 
   const previewUrls = useMemo(() => files.map((file) => URL.createObjectURL(file)), [files]);
 
@@ -121,6 +122,7 @@ export default function Upload() {
                     format: file.type.split("/")[1],
                     contentHash,
                     replaceExisting,
+                    aiGenerated,
                   }),
                 });
                 if (createRes.status === 409) {
@@ -221,6 +223,14 @@ export default function Upload() {
                   onChange={(event) => setReplaceExisting(event.target.checked)}
                 />
                 Reemplazar si ya existe en mi cuenta
+              </label>
+              <label className="upload-toggle">
+                <input
+                  type="checkbox"
+                  checked={aiGenerated}
+                  onChange={(event) => setAiGenerated(event.target.checked)}
+                />
+                Marcar como generada con IA
               </label>
             </div>
 
