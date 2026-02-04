@@ -26,6 +26,7 @@ export type PromptSourceParamProvider =
       searchParam?: string;
       labelKey?: string;
       keywordsKey?: string;
+      fallbackOptions?: PromptSourceOption[];
     }
   | {
       type: "dependent";
@@ -35,6 +36,7 @@ export type PromptSourceParamProvider =
       limit?: number;
       labelKey?: string;
       keywordsKey?: string;
+      fallbackOptions?: PromptSourceOption[];
     };
 
 export interface PromptSourceEntityResolver {
@@ -93,6 +95,9 @@ const paramSchema = z.discriminatedUnion("type", [
     searchParam: z.string().min(1).optional(),
     labelKey: z.string().min(1).optional(),
     keywordsKey: z.string().min(1).optional(),
+    fallbackOptions: z
+      .array(z.object({ id: z.string().min(1), label: z.string().min(1).optional() }))
+      .optional(),
   }),
   z.object({
     type: z.literal("dependent"),
@@ -102,6 +107,9 @@ const paramSchema = z.discriminatedUnion("type", [
     limit: z.number().int().positive().optional(),
     labelKey: z.string().min(1).optional(),
     keywordsKey: z.string().min(1).optional(),
+    fallbackOptions: z
+      .array(z.object({ id: z.string().min(1), label: z.string().min(1).optional() }))
+      .optional(),
   }),
 ]);
 
@@ -248,6 +256,7 @@ export interface ProviderAdapter {
 }
 
 const providerRegistry = new Map<string, ProviderAdapter>();
+const OPTIONS_NORMALIZATION_VERSION = 2;
 
 providerRegistry.set("static", {
   resolve: async (ids, source) => {
@@ -346,20 +355,38 @@ function renderSparql(
 }
 
 async function runWikidataSparql(query: string): Promise<PromptSourceOption[]> {
-  if (process.env.NODE_ENV !== "production") {
+  if (process.env.PROMPT_SOURCES_LOG_SPARQL === "1") {
     console.info("[prompt-sources] SPARQL query", query);
   }
   const url = new URL("https://query.wikidata.org/sparql");
   url.searchParams.set("format", "json");
   url.searchParams.set("query", query);
-  const response = await fetch(url.toString(), {
-    headers: {
-      accept: "application/sparql-results+json",
-      "user-agent": "seamless-tiles-dev/1.0 (https://localhost)",
-    },
-  });
+  const timeoutMs = Number(process.env.PROMPT_SOURCES_SPARQL_TIMEOUT_MS ?? "8000");
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  let response: Response;
+  try {
+    response = await fetch(url.toString(), {
+      headers: {
+        accept: "application/sparql-results+json",
+        "user-agent": "seamless-tiles-dev/1.0 (https://localhost)",
+      },
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (process.env.PROMPT_SOURCES_LOG_SPARQL === "1") {
+      const reason =
+        error instanceof DOMException && error.name === "AbortError"
+          ? `timeout ${timeoutMs}ms`
+          : "request failed";
+      console.warn("[prompt-sources] SPARQL request error", reason);
+    }
+    clearTimeout(timeout);
+    return [];
+  }
+  clearTimeout(timeout);
   if (!response.ok) {
-    if (process.env.NODE_ENV !== "production") {
+    if (process.env.PROMPT_SOURCES_LOG_SPARQL === "1") {
       const body = await response.text().catch(() => "");
       console.warn(
         "[prompt-sources] SPARQL request failed",
@@ -399,19 +426,32 @@ function hashInput(value: unknown) {
   return crypto.createHash("sha256").update(JSON.stringify(value)).digest("hex");
 }
 
+function normalizeOptionLabel(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ");
+}
+
 function normalizeOptions(
   options: PromptSourceOption[],
   sanitization?: PromptSourceSanitization,
   limit?: number
 ) {
-  const seen = new Set<string>();
+  const seenIds = new Set<string>();
+  const seenLabels = new Set<string>();
   const result: PromptSourceOption[] = [];
   for (const option of options) {
     const id = String(option.id ?? "").trim();
-    if (!id || seen.has(id)) continue;
+    if (!id || seenIds.has(id)) continue;
     const label = sanitizeLabel(option.label ?? id, sanitization);
     if (!label) continue;
-    seen.add(id);
+    const labelKey = normalizeOptionLabel(label);
+    if (labelKey && seenLabels.has(labelKey)) continue;
+    seenIds.add(id);
+    if (labelKey) seenLabels.add(labelKey);
     result.push({ id, label });
     if (limit && result.length >= limit) break;
   }
@@ -464,7 +504,10 @@ async function getCachedOptions(
   paramName: string,
   cacheKeyInput: unknown
 ) {
-  const ttl = source.cache?.ttlSeconds ?? 0;
+  const ttl =
+    source.provider === "wikidata"
+      ? Math.max(source.cache?.ttlSeconds ?? 0, 24 * 60 * 60)
+      : source.cache?.ttlSeconds ?? 0;
   if (!ttl) return null;
   const redis = getRedis();
   if (!redis) return null;
@@ -480,7 +523,10 @@ async function setCachedOptions(
   cacheKeyInput: unknown,
   options: PromptSourceOption[]
 ) {
-  const ttl = source.cache?.ttlSeconds ?? 0;
+  const ttl =
+    source.provider === "wikidata"
+      ? Math.max(source.cache?.ttlSeconds ?? 0, 24 * 60 * 60)
+      : source.cache?.ttlSeconds ?? 0;
   if (!ttl) return;
   const redis = getRedis();
   if (!redis) return;
@@ -499,7 +545,12 @@ async function getParamOptions(
 
   const providerName = getProviderName(context.source, param);
   const provider = providerRegistry.get(providerName);
-  const cacheKeyInput = { providerName, param, request: context.requestParams };
+  const cacheKeyInput = {
+    providerName,
+    param,
+    request: context.requestParams,
+    normalizeVersion: OPTIONS_NORMALIZATION_VERSION,
+  };
   const cached = await getCachedOptions(context.source, paramName, cacheKeyInput);
   if (cached) return { options: cached, hit: true };
 
@@ -517,8 +568,12 @@ async function getParamOptions(
     context.source.sanitization,
     param.limit
   );
-  await setCachedOptions(context.source, paramName, cacheKeyInput, normalized);
-  return { options: normalized, hit: false };
+  const finalOptions =
+    normalized.length === 0 && param.fallbackOptions?.length
+      ? normalizeOptions(param.fallbackOptions, context.source.sanitization, param.limit)
+      : normalized;
+  await setCachedOptions(context.source, paramName, cacheKeyInput, finalOptions);
+  return { options: finalOptions, hit: false };
 }
 
 export async function resolvePromptOptions({

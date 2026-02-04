@@ -9,7 +9,7 @@ import {
   useNavigate,
 } from "react-router";
 import type { Location } from "react-router";
-import { useEffect } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 import type { Route } from "./+types/root";
 import "./app.css";
@@ -74,7 +74,10 @@ export default function App() {
   const state = location.state as { backgroundLocation?: Location } | null;
   const backgroundLocation = state?.backgroundLocation;
   const isModalSource = Boolean(backgroundLocation);
+  const currentOutlet = <Outlet />;
+  const [frozenOutlet, setFrozenOutlet] = useState<ReactNode>(currentOutlet);
   const path = location.pathname;
+  const showTabs = path === "/";
   const isAuthRoute =
     path.startsWith("/login") ||
     path.startsWith("/register") ||
@@ -86,16 +89,22 @@ export default function App() {
     }
   }, []);
 
+  useEffect(() => {
+    if (!isModalSource) {
+      setFrozenOutlet(currentOutlet);
+    }
+  }, [isModalSource, location.key]);
+
   if (isAuthRoute) {
     return <Outlet />;
   }
 
   return (
     <div className="app-shell">
-      <TopNav showTabs={path === "/"} />
+      <TopNav showTabs={showTabs} />
       <SideNav />
-      <main className="app-main">
-        <Outlet location={isModalSource ? backgroundLocation : location} />
+      <main className={`app-main${showTabs ? " app-main--with-tabs" : ""}`}>
+        {isModalSource ? frozenOutlet : currentOutlet}
       </main>
       <MobileNav />
       {isModalSource ? (

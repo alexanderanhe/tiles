@@ -7,7 +7,6 @@ import { getR2PublicUrl, signDownloadUrl } from "../lib/r2.client.server";
 import { MasonryGrid } from "../components/MasonryGrid";
 import { TileCard } from "../components/TileCard";
 import { requireUser } from "../lib/auth.server";
-import { slugify } from "../lib/slug";
 
 export async function loader({ request }: Route.LoaderArgs) {
   await initServer();
@@ -33,8 +32,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     })
   );
 
-  const handle = user.username ?? (user.name ? slugify(user.name) : user.id);
-  return { tiles, page, total, limit, handle };
+  return { tiles, page, total, limit };
 }
 
 export function meta() {
@@ -42,7 +40,7 @@ export function meta() {
 }
 
 export default function MyTiles() {
-  const { tiles, total, limit, handle } = useLoaderData<typeof loader>();
+  const { tiles, total, limit } = useLoaderData<typeof loader>();
   const [items, setItems] = useState(tiles);
   const [page, setPage] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -112,7 +110,7 @@ export default function MyTiles() {
               key={tile._id}
               tile={tile}
               previewUrl={previewUrl}
-              ownerHandle={handle}
+              to={`/tiles/${tile._id}`}
             />
           ))}
         </MasonryGrid>

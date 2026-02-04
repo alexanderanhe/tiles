@@ -2,6 +2,20 @@ import crypto from "node:crypto";
 import { getCollections } from "./db.server";
 import type { Tile, TileVisibility } from "./types";
 
+export function normalizeTags(tags: string[] = []) {
+  const seen = new Set<string>();
+  const clean: string[] = [];
+  for (const rawTag of tags) {
+    const tag = String(rawTag ?? "").trim();
+    if (!tag) continue;
+    const key = tag.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    clean.push(tag);
+  }
+  return clean;
+}
+
 export async function createTile(params: {
   id?: string;
   ownerId: string;
@@ -24,7 +38,7 @@ export async function createTile(params: {
     templateId: params.templateId,
     title: params.title,
     description: params.description ?? "",
-    tags: params.tags ?? [],
+    tags: normalizeTags(params.tags ?? []),
     contentHash: params.contentHash,
     seamless: params.seamless ?? true,
     visibility: params.visibility ?? "public",

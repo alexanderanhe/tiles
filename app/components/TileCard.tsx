@@ -7,21 +7,28 @@ export function TileCard({
   previewUrl,
   ownerHandle,
   authorName,
+  to,
+  modalFromCurrentLocation = false,
 }: {
   tile: Tile;
   previewUrl?: string;
   ownerHandle?: string;
   authorName?: string;
+  to?: string;
+  modalFromCurrentLocation?: boolean;
 }) {
   const previewSrc = previewUrl ?? "";
   const location = useLocation();
   const slug = slugify(tile.title ?? "");
   const handle = ownerHandle ?? tile.ownerId;
-  const tileUrl = `/u/${handle}/${tile._id}${slug ? `-${slug}` : ""}`;
+  const tileUrl = to ?? `/u/${handle}/${tile._id}${slug ? `-${slug}` : ""}`;
+  const state = modalFromCurrentLocation
+    ? { backgroundLocation: location }
+    : undefined;
   return (
     <Link
       to={tileUrl}
-      state={{ backgroundLocation: location }}
+      state={state}
       className="tile-card"
     >
       <div className="tile-card__image">

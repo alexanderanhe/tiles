@@ -230,10 +230,14 @@ body {
 }
 
 .app-main {
-  padding-top: 124px;
+  padding-top: 76px;
   padding-left: 96px;
   padding-right: 24px;
   padding-bottom: 40px;
+}
+
+.app-main--with-tabs {
+  padding-top: 124px;
 }
 
 .page {
@@ -550,6 +554,79 @@ body {
 
 .generator-modal {
   max-width: 720px;
+}
+
+.generator-loading-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 80;
+  border-radius: inherit;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+
+.generator-loading-overlay__bg {
+  position: absolute;
+  inset: -24px;
+  background: radial-gradient(circle at 20% 20%, #f7d7d6, #f5f5f5 55%, #ececec);
+  background-size: cover;
+  background-position: center;
+  filter: blur(30px) saturate(1.1);
+  transform: scale(1.08);
+  animation: generator-bg-drift 6s ease-in-out infinite alternate;
+}
+
+.generator-loading-overlay__scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(6px);
+}
+
+.generator-loading-overlay__content {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  text-align: center;
+  padding: 20px;
+}
+
+.generator-loading-overlay__content h3 {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.generator-loading-overlay__content p {
+  font-size: 14px;
+  color: var(--color-muted);
+  max-width: 420px;
+}
+
+.generator-loading-overlay__spinner {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  border: 3px solid rgba(17, 17, 17, 0.15);
+  border-top-color: #111;
+  animation: generator-spin 0.8s linear infinite;
+}
+
+@keyframes generator-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes generator-bg-drift {
+  0% {
+    transform: scale(1.08) translate3d(-6px, -4px, 0);
+  }
+  100% {
+    transform: scale(1.12) translate3d(8px, 6px, 0);
+  }
 }
 
 .generator-result {
@@ -1430,6 +1507,10 @@ body {
     padding-left: 16px;
     padding-right: 16px;
     padding-bottom: 90px;
+    padding-top: 84px;
+  }
+
+  .app-main--with-tabs {
     padding-top: 108px;
   }
 

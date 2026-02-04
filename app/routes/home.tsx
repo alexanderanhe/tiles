@@ -209,6 +209,7 @@ export default function Home() {
                   tile={tile}
                   previewUrl={previewUrl}
                   authorName={authorName}
+                  modalFromCurrentLocation
                 />
               ))}
             </MasonryGrid>

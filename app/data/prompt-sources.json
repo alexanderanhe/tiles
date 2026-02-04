@@ -29,8 +29,15 @@
         "dependsOn": ["cityId"],
         "limit": 20,
         "labelKey": "naturalElementLabel",
+        "fallbackOptions": [
+          { "id": "Q4022", "label": "River" },
+          { "id": "Q23397", "label": "Lake" },
+          { "id": "Q12284", "label": "Canal" },
+          { "id": "Q12323", "label": "Reservoir" },
+          { "id": "Q34763", "label": "Peninsula" }
+        ],
         "query": {
-          "sparql": "SELECT DISTINCT ?id ?label WHERE { VALUES ?type { wd:Q4022 wd:Q23397 wd:Q12284 wd:Q12323 wd:Q34763 } ?id wdt:P31/wdt:P279* ?type . ?id (wdt:P131|wdt:P276) wd:{{cityId}} . OPTIONAL { ?id rdfs:label ?labelEn FILTER(LANG(?labelEn) = \"en\") } OPTIONAL { ?id rdfs:label ?labelAny } BIND(COALESCE(?labelEn, ?labelAny) AS ?label) } LIMIT {{limit}}"
+          "sparql": "SELECT DISTINCT ?id ?label WHERE { VALUES ?type { wd:Q4022 wd:Q23397 wd:Q12284 wd:Q12323 wd:Q34763 } wd:{{cityId}} wdt:P625 ?cityLoc . SERVICE wikibase:around { ?id wdt:P625 ?featureLoc . bd:serviceParam wikibase:center ?cityLoc . bd:serviceParam wikibase:radius \"30\" . bd:serviceParam wikibase:distance ?distance . } ?id wdt:P31/wdt:P279* ?type . OPTIONAL { ?id rdfs:label ?labelEn FILTER(LANG(?labelEn) = \"en\") } OPTIONAL { ?id rdfs:label ?labelAny } BIND(COALESCE(?labelEn, ?labelAny) AS ?label) } ORDER BY ?distance LIMIT {{limit}}"
         }
       }
     },

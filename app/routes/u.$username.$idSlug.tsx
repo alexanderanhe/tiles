@@ -345,16 +345,7 @@ export default function UserTileDetail() {
     </div>
   );
 
-  if (hasBackground) {
-    return (
-      <div className="modal-card">
-        <button className="modal-close" onClick={() => navigate(-1)}>
-          ✕
-        </button>
-        {content}
-      </div>
-    );
-  }
+  if (hasBackground) return content;
 
   return (
     <main className="page">

@@ -1,6 +1,5 @@
 import type { Route } from "./+types/tiles.$id";
-import { useLoaderData, useLocation, useNavigate } from "react-router";
-import type { Location } from "react-router";
+import { useLoaderData, useNavigate } from "react-router";
 import { useState } from "react";
 import { initServer } from "../lib/init.server";
 import { findTileById, incrementTileStats } from "../lib/tiles.server";
@@ -72,7 +71,6 @@ export default function TileDetail() {
   const { tile, previewUrl, user, canDownload } =
     useLoaderData<typeof loader>();
   const navigate = useNavigate();
-  const location = useLocation();
   const isOwner = Boolean(user && (user.id === tile.ownerId || user.role === "admin"));
   const [editOpen, setEditOpen] = useState(false);
   const [editTitle, setEditTitle] = useState(tile.title ?? "");
@@ -81,10 +79,6 @@ export default function TileDetail() {
   const [editVisibility, setEditVisibility] = useState(tile.visibility);
   const [editStatus, setEditStatus] = useState("");
   const [publishStatus, setPublishStatus] = useState("");
-  const hasBackground = Boolean(
-    (location.state as { backgroundLocation?: Location })?.backgroundLocation
-  );
-
   const content = (
     <div className="tile-detail">
       <div className="tile-detail__image">
@@ -265,17 +259,6 @@ export default function TileDetail() {
       </div>
     </div>
   );
-
-  if (hasBackground) {
-    return (
-      <div className="modal-card">
-        <button className="modal-close" onClick={() => navigate(-1)}>
-          ✕
-        </button>
-        {content}
-      </div>
-    );
-  }
 
   return (
     <main className="page">

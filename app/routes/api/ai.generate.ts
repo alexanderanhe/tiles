@@ -137,6 +137,9 @@ export async function action({ request }: Route.ActionArgs) {
   }
 
   const derived = deriveParams(safeInput);
+  const templateVars = themeLabel
+    ? { ...safeInput, ...derived, themeLabel }
+    : { ...safeInput, ...derived };
   const baseInstructions =
     template.id === "crayon-seamless-doodle-v2"
       ? "You must generate a true seamless tile. Edges must match perfectly on all sides. " +
@@ -245,23 +248,13 @@ export async function action({ request }: Route.ActionArgs) {
   await putObject(thumbCleanKey, cleanThumb.data, "image/webp");
 
   const title = template.titleTemplate
-    ? renderPrompt(template.titleTemplate, {
-        ...safeInput,
-        ...derived,
-        themeLabel,
-      })
+    ? renderPrompt(template.titleTemplate, templateVars)
     : `${template.name} — ${String(parsed.data?.theme ?? "AI")}`;
   const description = template.descriptionTemplate
-    ? renderPrompt(template.descriptionTemplate, {
-        ...safeInput,
-        ...derived,
-        themeLabel,
-      })
+    ? renderPrompt(template.descriptionTemplate, templateVars)
     : template.description ?? "AI generated seamless tile";
   const tagList = template.tags?.length
-    ? template.tags.map((tag) =>
-        renderPrompt(tag, { ...safeInput, ...derived, themeLabel })
-      )
+    ? template.tags.map((tag) => renderPrompt(tag, templateVars))
     : [String(parsed.data?.theme ?? "ai")];
   if (existing && existing.ownerId !== user.id) {
     const cloneId = crypto.randomUUID();

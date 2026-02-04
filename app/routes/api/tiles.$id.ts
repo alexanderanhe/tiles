@@ -4,7 +4,12 @@ import { initServer } from "../../lib/init.server";
 import { json, jsonError, jsonOk, parseJson } from "../../lib/api";
 import { getUserFromRequest } from "../../lib/auth.server";
 import { deleteObject } from "../../lib/r2.client.server";
-import { deleteTileById, findTileById, updateTileMeta } from "../../lib/tiles.server";
+import {
+  deleteTileById,
+  findTileById,
+  normalizeTags,
+  updateTileMeta,
+} from "../../lib/tiles.server";
 import { tileUpdateSchema } from "../../lib/validation.server";
 
 export async function loader({ request, params }: Route.LoaderArgs) {
@@ -53,7 +58,7 @@ export async function action({ request, params }: Route.ActionArgs) {
   const update: Record<string, unknown> = {};
   if (parsed.data.title !== undefined) update.title = nextTitle || "Untitled";
   if (parsed.data.description !== undefined) update.description = parsed.data.description;
-  if (parsed.data.tags !== undefined) update.tags = parsed.data.tags;
+  if (parsed.data.tags !== undefined) update.tags = normalizeTags(parsed.data.tags);
   if (parsed.data.visibility !== undefined) update.visibility = parsed.data.visibility;
   if (parsed.data.aiGenerated !== undefined) {
     update["meta.aiGenerated"] = parsed.data.aiGenerated;

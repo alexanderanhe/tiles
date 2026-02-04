@@ -95,6 +95,10 @@ export default function Generator() {
   const [optionsLoading, setOptionsLoading] = useState<Record<string, boolean>>({});
   const [optionsError, setOptionsError] = useState<string>("");
   const [searchQueryByKey, setSearchQueryByKey] = useState<Record<string, string>>({});
+  const [searchingByKey, setSearchingByKey] = useState<Record<string, boolean>>({});
+  const [selectedLabelByKey, setSelectedLabelByKey] = useState<Record<string, string>>(
+    {}
+  );
   const [comboboxOpenByKey, setComboboxOpenByKey] = useState<Record<string, boolean>>(
     {}
   );
@@ -103,6 +107,7 @@ export default function Generator() {
   const [paletteError, setPaletteError] = useState<string>("");
   const [paletteSuggestions, setPaletteSuggestions] = useState<PaletteSuggestion[]>([]);
   const optionsAbortRef = useRef<AbortController | null>(null);
+  const optionsRequestSeqRef = useRef(0);
 
   useEffect(() => {
     setLoadingTemplates(true);
@@ -122,6 +127,7 @@ export default function Generator() {
     () => templates.find((t) => t.id === selectedId),
     [templates, selectedId]
   );
+  const loadingBackdropUrl = selected?.samples?.[0] ?? "";
 
   function normalizeQuery(value: string) {
     return value
@@ -133,17 +139,30 @@ export default function Generator() {
   }
 
   function updateParam(key: string, value: unknown) {
+    const clearedKeys = selected?.uiHints
+      ? Object.entries(selected.uiHints)
+          .filter(([, hint]) => hint.dependsOn?.includes(key))
+          .map(([paramKey]) => paramKey)
+      : [];
     setParams((prev) => {
       const next = { ...prev, [key]: value };
-      if (selected?.uiHints) {
-        for (const [paramKey, hint] of Object.entries(selected.uiHints)) {
-          if (hint.dependsOn?.includes(key)) {
-            next[paramKey] = "";
-          }
-        }
+      for (const clearedKey of clearedKeys) {
+        next[clearedKey] = "";
       }
       return next;
     });
+    if (clearedKeys.length) {
+      setSelectedLabelByKey((prev) => {
+        const next = { ...prev };
+        let changed = false;
+        for (const clearedKey of clearedKeys) {
+          if (!(clearedKey in next)) continue;
+          delete next[clearedKey];
+          changed = true;
+        }
+        return changed ? next : prev;
+      });
+    }
   }
 
   function openTemplate(template: TemplateMeta) {
@@ -153,6 +172,8 @@ export default function Generator() {
     setOptionQueryByKey({});
     setOptionsError("");
     setSearchQueryByKey({});
+    setSearchingByKey({});
+    setSelectedLabelByKey({});
     setComboboxOpenByKey({});
     setPaletteOpen(false);
     setPaletteError("");
@@ -202,6 +223,7 @@ export default function Generator() {
     }
     const controller = new AbortController();
     optionsAbortRef.current = controller;
+    const requestSeq = ++optionsRequestSeqRef.current;
 
     const handle = window.setTimeout(() => {
       setOptionsLoading({ global: true });
@@ -211,14 +233,51 @@ export default function Generator() {
           if (!data?.options) return;
           setOptions(data.options);
           setOptionsError("");
+          setSearchingByKey((prev) => {
+            if (!selected?.uiHints) return {};
+            const next = { ...prev };
+            for (const [paramKey, hint] of Object.entries(selected.uiHints)) {
+              if (hint.widget !== "searchSelect" || !hint.searchParam) continue;
+              next[paramKey] = false;
+            }
+            return next;
+          });
           setParams((prev) => {
             let changed = false;
             const next = { ...prev };
             for (const [key, opts] of Object.entries(data.options)) {
               const schema = selected.paramsSchema?.[key];
               if (!schema || schema.type !== "string") continue;
-              if (!opts.length) continue;
               const current = String(next[key] ?? "");
+              const dependsOn = selected.uiHints?.[key]?.dependsOn ?? [];
+
+              if (dependsOn.length) {
+                const depsReady = dependsOn.every((depKey) => {
+                  const depValue = next[depKey];
+                  return typeof depValue === "string"
+                    ? depValue.trim().length > 0
+                    : Boolean(depValue);
+                });
+                if (!depsReady) {
+                  if (current) {
+                    next[key] = "";
+                    changed = true;
+                  }
+                  continue;
+                }
+                if (key === "naturalElementId" && !current && opts.length > 0) {
+                  next[key] = opts[0].id;
+                  changed = true;
+                  continue;
+                }
+                if (opts.length > 0 && current && !opts.some((opt) => opt.id === current)) {
+                  next[key] = "";
+                  changed = true;
+                }
+                continue;
+              }
+
+              if (!opts.length) continue;
               if (!current || !opts.some((opt) => opt.id === current)) {
                 next[key] = opts[0].id;
                 changed = true;
@@ -234,6 +293,16 @@ export default function Generator() {
         })
         .finally(() => {
           setOptionsLoading({});
+          if (requestSeq === optionsRequestSeqRef.current) {
+            setSearchingByKey((prev) => {
+              if (!Object.keys(prev).length) return prev;
+              const next: Record<string, boolean> = {};
+              for (const [key, value] of Object.entries(prev)) {
+                if (value) next[key] = false;
+              }
+              return next;
+            });
+          }
         });
     }, 250);
 
@@ -242,6 +311,21 @@ export default function Generator() {
       controller.abort();
     };
   }, [selectedId, selected, optionsQuery]);
+
+  useEffect(() => {
+    setSelectedLabelByKey((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const [key, value] of Object.entries(params)) {
+        if (typeof value !== "string" || !value) continue;
+        const label = options[key]?.find((item) => item.id === value)?.label;
+        if (!label || next[key] === label) continue;
+        next[key] = label;
+        changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [params, options]);
 
   const content =
     view === "result" ? (
@@ -381,6 +465,7 @@ export default function Generator() {
                     if (schema.type === "string" && uiHint?.widget === "searchSelect") {
                       const value = (params[key] as string) ?? "";
                       const searchQuery = searchQueryByKey[key] ?? "";
+                      const isSearching = Boolean(optionsLoading.global || searchingByKey[key]);
                       const normalizedQuery = normalizeQuery(searchQuery);
                       const filteredOptions = normalizedQuery.length < 2
                         ? optionsForKey
@@ -408,13 +493,34 @@ export default function Generator() {
                                 value={
                                   comboboxOpenByKey[key]
                                     ? searchQuery
-                                    : selectedLabel || searchQuery
+                                    : value
+                                      ? selectedLabel || selectedLabelByKey[key] || searchQuery
+                                      : searchQuery
                                 }
                                 onChange={(event) =>
-                                  setSearchQueryByKey((prev) => ({
-                                    ...prev,
-                                    [key]: event.target.value,
-                                  }))
+                                  {
+                                    const nextQuery = event.target.value;
+                                    setSearchQueryByKey((prev) => ({
+                                      ...prev,
+                                      [key]: nextQuery,
+                                    }));
+                                    if (uiHint.searchParam) {
+                                      setSearchingByKey((prev) => ({
+                                        ...prev,
+                                        [key]: true,
+                                      }));
+                                      setOptions((prev) => ({ ...prev, [key]: [] }));
+                                      if (value) {
+                                        updateParam(key, "");
+                                      }
+                                      setSelectedLabelByKey((prev) => {
+                                        if (!(key in prev)) return prev;
+                                        const next = { ...prev };
+                                        delete next[key];
+                                        return next;
+                                      });
+                                    }
+                                  }
                                 }
                                 onFocus={() =>
                                   setComboboxOpenByKey((prev) => ({ ...prev, [key]: true }))
@@ -447,7 +553,9 @@ export default function Generator() {
                             </div>
                             {comboboxOpenByKey[key] ? (
                               <div className="search-select__floating">
-                                {filteredOptions.length ? (
+                                {isSearching ? (
+                                  <div className="search-select__empty">Buscando...</div>
+                                ) : filteredOptions.length ? (
                                   filteredOptions.map((option) => (
                                     <button
                                       key={option.id}
@@ -458,6 +566,10 @@ export default function Generator() {
                                       onClick={() => {
                                         updateParam(key, option.id);
                                         setSearchQueryByKey((prev) => ({
+                                          ...prev,
+                                          [key]: option.label,
+                                        }));
+                                        setSelectedLabelByKey((prev) => ({
                                           ...prev,
                                           [key]: option.label,
                                         }));
@@ -721,6 +833,24 @@ export default function Generator() {
               >
                 {loading ? "Generando..." : "Generate"}
               </button>
+              {loading ? (
+                <div className="generator-loading-overlay" role="status" aria-live="polite">
+                  <div
+                    className="generator-loading-overlay__bg"
+                    style={
+                      loadingBackdropUrl
+                        ? { backgroundImage: `url(${loadingBackdropUrl})` }
+                        : undefined
+                    }
+                  />
+                  <div className="generator-loading-overlay__scrim" />
+                  <div className="generator-loading-overlay__content">
+                    <div className="generator-loading-overlay__spinner" />
+                    <h3>Generando tile</h3>
+                    <p>Estamos procesando tu imagen. Te mostramos el resultado en breve.</p>
+                  </div>
+                </div>
+              ) : null}
             </div>
           </div>
         ) : null}
